@@ -1,0 +1,25 @@
+{
+  "name": "staywise-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Staywise hotel booking and operations platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start:api": "npm --workspace=apps/api run start:dev",
+    "start:admin": "npm --workspace=apps/admin-web run dev",
+    "build:api": "npm --workspace=apps/api run build",
+    "build:admin": "npm --workspace=apps/admin-web run build",
+    "test:api": "npm --workspace=apps/api run test"
+  },
+  "keywords": [
+    "hotel-booking",
+    "nestjs",
+    "react",
+    "mongodb"
+  ],
+  "author": "Staywise Engineering Team",
+  "license": "UNLICENSED"
+}
