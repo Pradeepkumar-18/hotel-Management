@@ -5,14 +5,14 @@ This guide becomes executable after the application repository and environment a
 ## Prerequisites
 
 - Supported Node.js LTS and package manager.
-- Docker Desktop or access to a MongoDB development replica set.
+- MongoDB for local development. Standalone mode works with reduced guarantees; transactional verification requires a replica set.
 - Payment-provider sandbox account only when Phase 2 begins.
 
 ## Setup outline
 
 1. Clone the repository and install dependencies from the root (`npm install`).
 2. Copy `.env.example` to a local environment file and set database URL, app origins and random development secrets.
-3. Start MongoDB locally in replica-set mode or through the provided Compose configuration; transactions used by booking flows require replica-set mode.
+3. Start MongoDB locally. Standalone MongoDB is allowed only for local development and runs writes without transactions, so inventory updates are not concurrency-safe. Use replica-set mode for transactional development checks and all production deployments.
 4. Apply migrations and optional seed data.
 5. Start the API with `npm run start:api` and the admin UI with `npm run start:admin` (Vite at `http://localhost:5173`). Add that origin to `CORS_ORIGINS`; `.env.example` includes it.
 6. Open API docs and verify health/readiness. Sign in with a seeded non-production admin account if available.
