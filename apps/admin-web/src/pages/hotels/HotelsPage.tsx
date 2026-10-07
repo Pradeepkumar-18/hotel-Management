@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Hotel, request, StaffMe } from '../../api';
 import { AsyncButton, useToast } from '../../ui-feedback';
-import { Alert, EmptyState, LoadingRows, PageHeading, Button } from '../../components/ui';
+import { PageHeading, Button, DataTable, Column } from '../../components/ui';
 import { readId } from '../../utils/helpers';
 import { HotelCreateModal } from '../../features/hotels/HotelCreateModal';
 import { HotelWorkspace } from '../../features/hotels/HotelWorkspace';
@@ -143,6 +143,146 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     return { completed, total: 5, percent };
   };
 
+  // Reusable Columns Definition for DataTable
+  const columns: Column<Hotel>[] = [
+    {
+      key: 'checkbox',
+      header: (
+        <input
+          type="checkbox"
+          className="w-4 h-4 rounded border-slate-300 text-[#1e6354] focus:ring-[#1e6354] cursor-pointer"
+          checked={selectedIds.size === paginatedHotels.length && paginatedHotels.length > 0}
+          onChange={toggleSelectAll}
+        />
+      ),
+      cell: (h) => (
+        <div onClick={e => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            className="w-4 h-4 rounded border-slate-300 text-[#1e6354] focus:ring-[#1e6354] cursor-pointer"
+            checked={selectedIds.has(readId(h))}
+            onChange={() => toggleSelectRow(readId(h))}
+          />
+        </div>
+      ),
+      align: 'center',
+      headerClassName: 'w-10',
+    },
+    {
+      key: 'hotel',
+      header: 'Hotel',
+      cell: (h) => (
+        <div className="flex items-center gap-3 min-w-[200px]">
+          <div className="w-10 h-10 rounded-lg bg-[#e9f3ee] text-[#1e6354] flex items-center justify-center shrink-0 border border-[#c2dcd0] overflow-hidden relative shadow-2xs">
+            {/* @ts-ignore */}
+            {h.primaryImage || h.heroImage ? (
+              <img
+                /* @ts-ignore */
+                src={h.primaryImage || h.heroImage}
+                alt={h.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Building2 size={20} className="text-[#1e6354]" />
+            )}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <b className="font-bold text-[#20322d] text-sm truncate">{h.name}</b>
+            <span className="text-xs text-[#73827b] font-mono leading-normal">/{h.slug}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'location',
+      header: 'Location',
+      cell: (h) => (
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <MapPin size={15} className="text-[#73827b] shrink-0" />
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-[#33483e] leading-snug">
+              {h.address?.city || 'Not set'}, {h.address?.countryCode || 'IN'}
+            </span>
+            <span className="text-xs text-[#89958e] leading-normal font-mono">
+              {h.address?.postalCode || '626123'}
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (h) => <StatusPill status={h.status} />,
+    },
+    {
+      key: 'setup',
+      header: 'Setup Progress',
+      cell: (h) => {
+        const progress = getSetupProgress(h);
+        return (
+          <div className="flex flex-col gap-1 w-36 whitespace-nowrap">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#73827b] font-medium">{progress.completed} of 5 completed</span>
+              <span className="font-bold text-[#20322d]">{progress.percent}%</span>
+            </div>
+            <div className="w-full h-2 bg-[#e4e9e3] rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 rounded-full ${
+                  progress.percent === 100
+                    ? 'bg-[#1e6354]'
+                    : progress.percent >= 60
+                    ? 'bg-[#1e6354]'
+                    : 'bg-[#d97706]'
+                }`}
+                style={{ width: `${progress.percent}%` }}
+              />
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'updated',
+      header: 'Last Updated',
+      cell: (h) => (
+        <div className="flex flex-col text-xs text-[#637169] whitespace-nowrap">
+          <span className="font-semibold text-[#33483e]">
+            {h.updatedAt ? new Date(h.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 6, 2026'}
+          </span>
+          <span className="text-[#89958e] text-[11px] font-mono mt-0.5">
+            {h.updatedAt ? new Date(h.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '11:06 AM'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right',
+      cell: (h) => (
+        <div className="flex items-center justify-end gap-2 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+          <Button
+            variant="outline"
+            size="sm"
+            rightIcon={<ExternalLink size={14} />}
+            onClick={() => setSelected(h)}
+          >
+            Open workspace
+          </Button>
+          <button
+            type="button"
+            className="p-1.5 text-[#73827b] hover:text-[#20322d] hover:bg-[#f4f6f3] rounded-lg transition-colors cursor-pointer"
+            onClick={() => setSelected(h)}
+            title="More options"
+          >
+            <MoreVertical size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-5 w-full max-w-full">
       {/* Page Header */}
@@ -232,343 +372,146 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         </div>
       </div>
 
-      {/* Unified Filter & Table Card Container */}
-      <div className="bg-white border border-[#e4e9e3] rounded-xl shadow-2xs overflow-hidden">
-        {/* Top Search & Filter Toolbar Header */}
-        <div className="p-3.5 space-y-2.5 border-b border-[#edf0ec]">
-          {/* Top Search Line */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="flex-1 flex items-center gap-2.5 px-3.5 py-2 bg-[#f4f6f3] border border-[#e4e9e4] rounded-lg focus-within:bg-white focus-within:border-[#1e6354] focus-within:ring-2 focus-within:ring-[#1e6354]/15 transition-all">
-              <Search size={18} className="text-[#809087] shrink-0" />
-              <input
-                type="text"
-                className="w-full bg-transparent border-none text-sm text-[#33483d] placeholder-[#99a39d] focus:outline-none font-medium"
-                placeholder="Search by hotel name, city, slug or ID..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="px-2.5 py-1.5 text-xs font-mono text-[#63736a] bg-[#f4f6f3] border border-[#e4e9e3] rounded-md hidden sm:inline-block">
-                Asia/Kolkata
-              </span>
-              <AsyncButton
-                className="p-2.5 text-[#63736a] hover:text-[#20322d] bg-white border border-[#e4e9e3] rounded-lg hover:bg-[#f4f6f3] transition-colors cursor-pointer"
-                onClick={load}
-                busy={loading}
-                title="Refresh list"
-              >
-                <RefreshCw size={16} />
-              </AsyncButton>
-            </div>
-          </div>
-
-          {/* Dropdown Filters Line - Responsive Wrapping */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-[#edf0ec]">
-            <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
-              {/* Status Filter */}
-              <div className="flex flex-col gap-0.5 flex-1 sm:flex-initial min-w-[130px]">
-                <span className="text-[10px] font-bold text-[#73827b] uppercase tracking-wider">Status</span>
-                <select
-                  className="h-8.5 px-2.5 w-full bg-white border border-[#d8e0da] rounded-lg text-xs font-semibold text-[#33483e] focus:border-[#1e6354] focus:outline-none cursor-pointer"
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
+      {/* Unified Reusable DataTable Component */}
+      <DataTable<Hotel>
+        data={paginatedHotels}
+        columns={columns}
+        rowKey={h => readId(h)}
+        loading={loading}
+        error={error}
+        onRowClick={h => setSelected(h)}
+        selectedRowKeys={selectedIds}
+        emptyTitle="No matching properties found"
+        emptyCopy="Try adjusting your search keywords or filter dropdowns to view matching hotels."
+        emptyIcon={<Building2 size={32} />}
+        emptyAction={
+          canCreate ? (
+            <Button variant="primary" size="md" leftIcon={<Plus size={18} />} onClick={() => setOpen(true)}>
+              Add a hotel
+            </Button>
+          ) : undefined
+        }
+        toolbarHeader={
+          <>
+            {/* Top Search Line */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex-1 flex items-center gap-2.5 px-3.5 py-2 bg-[#f4f6f3] border border-[#e4e9e4] rounded-lg focus-within:bg-white focus-within:border-[#1e6354] focus-within:ring-2 focus-within:ring-[#1e6354]/15 transition-all">
+                <Search size={18} className="text-[#809087] shrink-0" />
+                <input
+                  type="text"
+                  className="w-full bg-transparent border-none text-sm text-[#33483d] placeholder-[#99a39d] focus:outline-none font-medium"
+                  placeholder="Search by hotel name, city, slug or ID..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="px-2.5 py-1.5 text-xs font-mono text-[#63736a] bg-[#f4f6f3] border border-[#e4e9e3] rounded-md hidden sm:inline-block">
+                  Asia/Kolkata
+                </span>
+                <AsyncButton
+                  className="p-2.5 text-[#63736a] hover:text-[#20322d] bg-white border border-[#e4e9e3] rounded-lg hover:bg-[#f4f6f3] transition-colors cursor-pointer"
+                  onClick={load}
+                  busy={loading}
+                  title="Refresh list"
                 >
-                  <option value="ALL">All statuses</option>
-                  <option value="DRAFT">Draft</option>
-                  <option value="PUBLISHED">Published</option>
-                  <option value="SUSPENDED">Paused</option>
-                  <option value="ARCHIVED">Archived</option>
-                </select>
-              </div>
-
-              {/* Location Filter */}
-              <div className="flex flex-col gap-0.5 flex-1 sm:flex-initial min-w-[130px]">
-                <span className="text-[10px] font-bold text-[#73827b] uppercase tracking-wider">Location</span>
-                <select
-                  className="h-8.5 px-2.5 w-full bg-white border border-[#d8e0da] rounded-lg text-xs font-semibold text-[#33483e] focus:border-[#1e6354] focus:outline-none cursor-pointer"
-                  value={locationFilter}
-                  onChange={e => setLocationFilter(e.target.value)}
-                >
-                  <option value="ALL">All locations</option>
-                  {uniqueLocations.map(loc => (
-                    <option value={loc} key={loc}>
-                      {loc}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Setup Status Filter */}
-              <div className="flex flex-col gap-0.5 flex-1 sm:flex-initial min-w-[130px]">
-                <span className="text-[10px] font-bold text-[#73827b] uppercase tracking-wider">Setup Status</span>
-                <select
-                  className="h-8.5 px-2.5 w-full bg-white border border-[#d8e0da] rounded-lg text-xs font-semibold text-[#33483e] focus:border-[#1e6354] focus:outline-none cursor-pointer"
-                  value={setupFilter}
-                  onChange={e => setSetupFilter(e.target.value)}
-                >
-                  <option value="ALL">All</option>
-                  <option value="COMPLETED">Completed (100%)</option>
-                  <option value="IN_PROGRESS">Action required (&lt;100%)</option>
-                </select>
-              </div>
-
-              {/* Time Filter */}
-              <div className="flex flex-col gap-0.5 flex-1 sm:flex-initial min-w-[130px]">
-                <span className="text-[10px] font-bold text-[#73827b] uppercase tracking-wider">Updated</span>
-                <select
-                  className="h-8.5 px-2.5 w-full bg-white border border-[#d8e0da] rounded-lg text-xs font-semibold text-[#33483e] focus:border-[#1e6354] focus:outline-none cursor-pointer"
-                  value={timeFilter}
-                  onChange={e => setTimeFilter(e.target.value)}
-                >
-                  <option value="ALL">Any time</option>
-                  <option value="TODAY">Today</option>
-                  <option value="THIS_WEEK">This week</option>
-                  <option value="THIS_MONTH">This month</option>
-                </select>
+                  <RefreshCw size={16} />
+                </AsyncButton>
               </div>
             </div>
 
-            <div className="self-end shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                leftIcon={<SlidersHorizontal size={14} />}
-                onClick={() => toast.info('Custom column ordering will be available in the upcoming phase.')}
-              >
-                Columns
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {error && (
-          <div className="p-4">
-            <Alert tone="error">{error}</Alert>
-          </div>
-        )}
-
-        {/* Table Content & Pagination */}
-        {loading ? (
-          <div className="p-4">
-            <LoadingRows count={5} />
-          </div>
-        ) : paginatedHotels.length ? (
-          <div>
-            <div className="overflow-x-auto">
-              <table className="min-w-[960px] w-full text-left text-sm text-[#20322d] divide-y divide-[#edf0ec]">
-                <thead className="bg-[#fafbf9] font-bold uppercase tracking-wider text-[#859189] text-xs">
-                  <tr>
-                    <th className="py-2.5 px-3.5 w-10 text-center">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-slate-300 text-[#1e6354] focus:ring-[#1e6354] cursor-pointer"
-                        checked={selectedIds.size === paginatedHotels.length && paginatedHotels.length > 0}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
-                    <th className="py-2.5 px-3.5 font-bold">Hotel</th>
-                    <th className="py-2.5 px-3.5 font-bold">Location</th>
-                    <th className="py-2.5 px-3.5 font-bold">Status</th>
-                    <th className="py-2.5 px-3.5 font-bold">Setup Progress</th>
-                    <th className="py-2.5 px-3.5 font-bold">Last Updated</th>
-                    <th className="py-2.5 px-3.5 text-right font-bold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#edf0ec]">
-                  {paginatedHotels.map(h => {
-                    const id = readId(h);
-                    const isSelected = selectedIds.has(id);
-                    const progress = getSetupProgress(h);
-
-                    return (
-                      <tr
-                        key={id}
-                        onClick={() => setSelected(h)}
-                        className={`transition-colors cursor-pointer ${
-                          isSelected ? 'bg-[#e9f3ee]/70' : 'hover:bg-[#f4f7f4]/80'
-                        }`}
-                      >
-                        {/* Checkbox */}
-                        <td className="py-3 px-3.5 w-10 text-center" onClick={e => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-slate-300 text-[#1e6354] focus:ring-[#1e6354] cursor-pointer"
-                            checked={isSelected}
-                            onChange={() => toggleSelectRow(id)}
-                          />
-                        </td>
-
-                        {/* Hotel Thumbnail & Name */}
-                        <td className="py-3 px-3.5">
-                          <div className="flex items-center gap-3 min-w-[200px]">
-                            <div className="w-10 h-10 rounded-lg bg-[#e9f3ee] text-[#1e6354] flex items-center justify-center shrink-0 border border-[#c2dcd0] overflow-hidden relative shadow-2xs">
-                              {/* @ts-ignore */}
-                              {h.primaryImage || h.heroImage ? (
-                                <img
-                                  /* @ts-ignore */
-                                  src={h.primaryImage || h.heroImage}
-                                  alt={h.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Building2 size={20} className="text-[#1e6354]" />
-                              )}
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <b className="font-bold text-[#20322d] text-sm truncate">{h.name}</b>
-                              <span className="text-xs text-[#73827b] font-mono leading-normal">/{h.slug}</span>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Location */}
-                        <td className="py-3 px-3.5 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <MapPin size={15} className="text-[#73827b] shrink-0" />
-                            <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-[#33483e] leading-snug">
-                                {h.address?.city || 'Not set'}, {h.address?.countryCode || 'IN'}
-                              </span>
-                              <span className="text-xs text-[#89958e] leading-normal font-mono">
-                                {h.address?.postalCode || '626123'}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Status Pill Badge */}
-                        <td className="py-3 px-3.5 whitespace-nowrap">
-                          <StatusPill status={h.status} />
-                        </td>
-
-                        {/* Setup Progress */}
-                        <td className="py-3 px-3.5 whitespace-nowrap">
-                          <div className="flex flex-col gap-1 w-36">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-[#73827b] font-medium">{progress.completed} of 5 completed</span>
-                              <span className="font-bold text-[#20322d]">{progress.percent}%</span>
-                            </div>
-                            <div className="w-full h-2 bg-[#e4e9e3] rounded-full overflow-hidden">
-                              <div
-                                className={`h-full transition-all duration-300 rounded-full ${
-                                  progress.percent === 100
-                                    ? 'bg-[#1e6354]'
-                                    : progress.percent >= 60
-                                    ? 'bg-[#1e6354]'
-                                    : 'bg-[#d97706]'
-                                }`}
-                                style={{ width: `${progress.percent}%` }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Last Updated */}
-                        <td className="py-3 px-3.5 whitespace-nowrap">
-                          <div className="flex flex-col text-xs text-[#637169]">
-                            <span className="font-semibold text-[#33483e]">
-                              {h.updatedAt ? new Date(h.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Oct 6, 2026'}
-                            </span>
-                            <span className="text-[#89958e] text-[11px] font-mono mt-0.5">
-                              {h.updatedAt ? new Date(h.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '11:06 AM'}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-3 px-3.5 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              rightIcon={<ExternalLink size={14} />}
-                              onClick={() => setSelected(h)}
-                            >
-                              Open workspace
-                            </Button>
-                            <button
-                              type="button"
-                              className="p-1.5 text-[#73827b] hover:text-[#20322d] hover:bg-[#f4f6f3] rounded-lg transition-colors cursor-pointer"
-                              onClick={() => setSelected(h)}
-                              title="More options"
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination Footer */}
-            <div className="p-4 bg-[#fafbf9] border-t border-[#edf0ec] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-[#73827b]">
-              <div>
-                Showing {filteredHotels.length ? (currentPage - 1) * pageSize + 1 : 0}–
-                {Math.min(currentPage * pageSize, filteredHotels.length)} of {filteredHotels.length} hotels
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span>Rows per page</span>
+            {/* Dropdown Filters Line */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-[#edf0ec]">
+              <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+                {/* Status Filter */}
+                <div className="flex flex-col gap-0.5 flex-1 sm:flex-initial min-w-[130px]">
+                  <span className="text-[10px] font-bold text-[#73827b] uppercase tracking-wider">Status</span>
                   <select
-                    className="h-8 px-2 bg-white border border-[#d8e0da] rounded-md text-xs font-semibold text-[#33483e] focus:outline-none cursor-pointer"
-                    value={pageSize}
-                    onChange={e => {
-                      setPageSize(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
+                    className="h-8.5 px-2.5 w-full bg-white border border-[#d8e0da] rounded-lg text-xs font-semibold text-[#33483e] focus:border-[#1e6354] focus:outline-none cursor-pointer"
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
                   >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
+                    <option value="ALL">All statuses</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="PUBLISHED">Published</option>
+                    <option value="SUSPENDED">Paused</option>
+                    <option value="ARCHIVED">Archived</option>
                   </select>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={currentPage <= 1}
-                    className="w-8 h-8 rounded-md border border-[#d8e0da] bg-white flex items-center justify-center text-[#33483e] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f4f6f3] transition-colors cursor-pointer"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                {/* Location Filter */}
+                <div className="flex flex-col gap-0.5 flex-1 sm:flex-initial min-w-[130px]">
+                  <span className="text-[10px] font-bold text-[#73827b] uppercase tracking-wider">Location</span>
+                  <select
+                    className="h-8.5 px-2.5 w-full bg-white border border-[#d8e0da] rounded-lg text-xs font-semibold text-[#33483e] focus:border-[#1e6354] focus:outline-none cursor-pointer"
+                    value={locationFilter}
+                    onChange={e => setLocationFilter(e.target.value)}
                   >
-                    ‹
-                  </button>
-                  <span className="w-8 h-8 rounded-md bg-[#1e6354] text-white font-bold flex items-center justify-center text-xs">
-                    {currentPage}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={currentPage >= totalPages}
-                    className="w-8 h-8 rounded-md border border-[#d8e0da] bg-white flex items-center justify-center text-[#33483e] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f4f6f3] transition-colors cursor-pointer"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    <option value="ALL">All locations</option>
+                    {uniqueLocations.map(loc => (
+                      <option value={loc} key={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Setup Status Filter */}
+                <div className="flex flex-col gap-0.5 flex-1 sm:flex-initial min-w-[130px]">
+                  <span className="text-[10px] font-bold text-[#73827b] uppercase tracking-wider">Setup Status</span>
+                  <select
+                    className="h-8.5 px-2.5 w-full bg-white border border-[#d8e0da] rounded-lg text-xs font-semibold text-[#33483e] focus:border-[#1e6354] focus:outline-none cursor-pointer"
+                    value={setupFilter}
+                    onChange={e => setSetupFilter(e.target.value)}
                   >
-                    ›
-                  </button>
+                    <option value="ALL">All</option>
+                    <option value="COMPLETED">Completed (100%)</option>
+                    <option value="IN_PROGRESS">Action required (&lt;100%)</option>
+                  </select>
+                </div>
+
+                {/* Time Filter */}
+                <div className="flex flex-col gap-0.5 flex-1 sm:flex-initial min-w-[130px]">
+                  <span className="text-[10px] font-bold text-[#73827b] uppercase tracking-wider">Updated</span>
+                  <select
+                    className="h-8.5 px-2.5 w-full bg-white border border-[#d8e0da] rounded-lg text-xs font-semibold text-[#33483e] focus:border-[#1e6354] focus:outline-none cursor-pointer"
+                    value={timeFilter}
+                    onChange={e => setTimeFilter(e.target.value)}
+                  >
+                    <option value="ALL">Any time</option>
+                    <option value="TODAY">Today</option>
+                    <option value="THIS_WEEK">This week</option>
+                    <option value="THIS_MONTH">This month</option>
+                  </select>
                 </div>
               </div>
+
+              <div className="self-end shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<SlidersHorizontal size={14} />}
+                  onClick={() => toast.info('Custom column ordering will be available in the upcoming phase.')}
+                >
+                  Columns
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="p-8">
-            <EmptyState
-              icon={<Building2 />}
-              title="No matching properties found"
-              copy="Try adjusting your search keywords or filter dropdowns to view matching hotels."
-              action={
-                canCreate ? (
-                  <Button variant="primary" size="md" leftIcon={<Plus size={18} />} onClick={() => setOpen(true)}>
-                    Add a hotel
-                  </Button>
-                ) : undefined
-              }
-            />
-          </div>
-        )}
-      </div>
+          </>
+        }
+        pagination={{
+          currentPage,
+          totalPages,
+          totalItems: filteredHotels.length,
+          pageSize,
+          onPageChange: setCurrentPage,
+          onPageSizeChange: size => {
+            setPageSize(size);
+            setCurrentPage(1);
+          },
+          itemLabel: 'hotels',
+        }}
+      />
 
       {/* Hotel Create Modal */}
       {open && (

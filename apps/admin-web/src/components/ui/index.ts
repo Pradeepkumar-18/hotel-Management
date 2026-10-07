@@ -8,3 +8,4 @@ export * from './LoadingRows';
 export * from './MetricCard';
 export * from './KpiStrip';
 export * from './Button';
+export * from './DataTable';
