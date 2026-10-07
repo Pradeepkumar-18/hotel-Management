@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, ClientSession } from 'mongoose';
 
@@ -6,7 +6,12 @@ import { Connection, ClientSession } from 'mongoose';
 export class TransactionService {
   private readonly logger = new Logger(TransactionService.name);
 
-  constructor(@InjectConnection() private readonly connection: Connection) {}
+  private standaloneWarningLogged = false;
+
+  constructor(
+    @InjectConnection() private readonly connection: Connection,
+    @Optional() private readonly nodeEnv?: string,
+  ) {}
 
   /**
    * Checks whether the current MongoDB connection is part of a replica set
@@ -16,9 +21,8 @@ export class TransactionService {
       if (!this.connection.db) {
         return false;
       }
-      const adminDb = this.connection.db.admin();
-      const status = await adminDb.command({ replSetGetStatus: 1 }).catch(() => null);
-      return status !== null && status.ok === 1;
+      const hello = await this.connection.db.admin().command({ hello: 1 });
+      return typeof hello.setName === 'string' && hello.setName.length > 0;
     } catch {
       return false;
     }
@@ -36,6 +40,19 @@ export class TransactionService {
     let attempt = 0;
 
     try {
+      if (!this.connection.db) throw new Error('MongoDB connection is not ready');
+      const hello = await this.connection.db.admin().command({ hello: 1 });
+      if (typeof hello.setName !== 'string' || hello.setName.length === 0) {
+        if ((this.nodeEnv || process.env.NODE_ENV) !== 'development') {
+          throw new Error('MongoDB replica-set topology is required for transaction-backed operations outside local development');
+        }
+        if (!this.standaloneWarningLogged) {
+          this.logger.warn('Standalone MongoDB detected: local development writes are running without transactions; atomicity and inventory concurrency guarantees are disabled');
+          this.standaloneWarningLogged = true;
+        }
+        return await operation(session);
+      }
+
       while (attempt < maxRetries) {
         attempt++;
         try {

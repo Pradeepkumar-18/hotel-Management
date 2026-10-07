@@ -13,9 +13,9 @@ Status values: `TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`. No tasks are marked don
 
 - [ ] Staff session login, permission loading, and initial super-admin bootstrap (in progress; MFA, invitations, recovery, and broader session management remain).
 - [ ] Hotel and room-type data model and admin CRUD (in progress: versioned, audited APIs and the first admin property/room workflows; media and remaining catalog actions remain).
-- [ ] Inventory by room type and local stay date; blocks and total-room changes (in progress: bounded initialization, scoped calendar, audited blocks, guarded room-count updates; replica-set integration checks cover initialization and block safeguards).
-- [ ] Base rate setup and hotel publication workflow (API and admin screens implemented; integration acceptance still needed).
-- [ ] Admin property setup UI (first slice implemented: hotels, room types, policy, rates, inventory, and publish; responsive production review remains).
+- [x] Inventory by room type and local stay date; blocks and total-room changes (bounded initialization, exclusive date ranges, scoped calendar, audited blocks, and guarded room-count updates; replica-set integration tests pass for initialization, blocks, and capacity safeguards).
+- [x] Base rate setup and hotel publication workflow (API and admin screens implemented; replica-set integration tests pass for optimistic rate versioning, audit records, and publication gates for policy, rates, and future inventory).
+- [ ] Admin property setup UI (first slice includes a data-backed property dashboard and scoped KPIs for hotel status, room setup, rate coverage, and selected-room inventory; hotels, room types, policy, rates, inventory, and publish workflows are present; responsive production review remains).
 - [ ] Public hotel detail and search UI/API (detail endpoint exists; search, quote, tax decisions and guest UI remain).
 
 ## Sprint 2 — Availability and booking

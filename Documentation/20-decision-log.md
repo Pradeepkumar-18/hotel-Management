@@ -15,5 +15,6 @@ Record: ID, date, status, context, decision, alternatives, consequences, owner. 
 | ADR-009 | Cancellation | Snapshot property policy on booking; refund asynchronous | Proposed; define default policy |
 | ADR-010 | Staff tenancy | Super admin first; hotel manager later with explicit property scope | Proposed |
 | ADR-011 | Browser authentication | Opaque server-managed sessions in secure HttpOnly cookies; separate guest/staff audiences; CSRF protection | **STANDARD**; defaults and lifecycle defined in `modules/authentication.md` |
+| ADR-012 | Standalone MongoDB in local development | Permit non-transactional writes only when `NODE_ENV=development`; production and other environments continue to require a replica set | **DECIDED** for local development; standalone mode does not provide atomic inventory guarantees |
 
 Update related requirements, schema, API and business rules when a decision is approved.
