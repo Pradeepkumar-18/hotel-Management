@@ -5,7 +5,7 @@ Status values: `TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`. No tasks are marked don
 ## Sprint 0 — Decisions and foundations
 
 - [x] Confirm launch market, currency, time-zone model, tax rules and payment provider defaults (`.env.example`, `configuration.ts`).
-- [x] Choose API/database/ORM and hosting; record ADRs (ADR-001, ADR-002, ADR-011 established).
+- [x] Choose API/database/ORM and hosting; record ADRs (ADR-001, ADR-002, ADR-011, ADR-013 established).
 - [x] Scaffold apps, migrations, lint/build pipeline, config and health checks (NestJS API, `@staywise/contracts`, `/api/v1/health` verified, and MongoDB replica-set transactions verified).
 - [x] Publish API contract and define audit/logging conventions (Swagger OpenAPI at `/api/docs`, `AuditLog` schema, and `AuditService` with metadata redaction).
 
@@ -15,7 +15,8 @@ Status values: `TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`. No tasks are marked don
 - [ ] Hotel and room-type data model and admin CRUD (in progress: versioned, audited APIs and the first admin property/room workflows; media and remaining catalog actions remain).
 - [x] Inventory by room type and local stay date; blocks and total-room changes (bounded initialization, exclusive date ranges, scoped calendar, audited blocks, and guarded room-count updates; replica-set integration tests pass for initialization, blocks, and capacity safeguards).
 - [x] Base rate setup and hotel publication workflow (API and admin screens implemented; replica-set integration tests pass for optimistic rate versioning, audit records, and publication gates for policy, rates, and future inventory).
-- [ ] Admin property setup UI (first slice includes a data-backed property dashboard and scoped KPIs for hotel status, room setup, rate coverage, and selected-room inventory; hotels, room types, policy, rates, inventory, and publish workflows are present; responsive production review remains).
+- [x] Admin property setup UI & Modular Architecture (Refactored `apps/admin-web` to 1-component-per-file modular architecture with Tailwind CSS v4, Staywise brand forest green & lime green theme, standardized `Button` primitive, scaled typography & icons, and flexbox alignment fixes; production build verified).
+- [ ] Planned Hotel Backend Extensions (Media upload API `POST /admin/hotels/:id/media`, Mongoose text search index, backend multi-filter queries, `PATCH /admin/hotels/bulk-status`, and `POST /admin/hotels/import` bulk CSV endpoints).
 - [ ] Public hotel detail and search UI/API (detail endpoint exists; search, quote, tax decisions and guest UI remain).
 
 ## Sprint 2 — Availability and booking
