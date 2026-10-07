@@ -99,6 +99,23 @@ export class HotelCancellationPolicy {
 
 export const HotelCancellationPolicySchema = SchemaFactory.createForClass(HotelCancellationPolicy);
 
+@Schema({ _id: false })
+export class HotelMedia {
+  @Prop({ required: true, trim: true, maxlength: 1000 })
+  url: string;
+
+  @Prop({ required: true, default: false })
+  isPrimary: boolean;
+
+  @Prop({ trim: true, maxlength: 200 })
+  caption?: string;
+
+  @Prop({ required: true, default: 0, min: 0 })
+  displayOrder: number;
+}
+
+export const HotelMediaSchema = SchemaFactory.createForClass(HotelMedia);
+
 @Schema({ timestamps: true, collection: 'hotels', optimisticConcurrency: false })
 export class Hotel {
   _id: Types.ObjectId;
@@ -127,6 +144,12 @@ export class Hotel {
   @Prop({ type: [String], default: [] })
   amenities: string[];
 
+  @Prop({ trim: true, maxlength: 1000 })
+  primaryImage?: string;
+
+  @Prop({ type: [HotelMediaSchema], default: [] })
+  media: HotelMedia[];
+
   @Prop({ type: HotelCancellationPolicySchema })
   cancellationPolicy?: HotelCancellationPolicy;
 
@@ -143,3 +166,8 @@ export class Hotel {
 export const HotelSchema = SchemaFactory.createForClass(Hotel);
 HotelSchema.index({ slug: 1 }, { unique: true, name: 'hotel_slug_unique' });
 HotelSchema.index({ status: 1, 'address.city': 1 }, { name: 'hotel_status_city' });
+HotelSchema.index(
+  { name: 'text', slug: 'text', 'address.city': 'text' },
+  { name: 'hotel_text_search', weights: { name: 10, slug: 5, 'address.city': 3 } }
+);
+

@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RequirePermission, StaffPermissionGuard, StaffPrincipal } from '../../common/auth/staff-permission.guard';
-import { CreateHotelDto, HotelListQueryDto, UpdateHotelDto } from './dto/hotel.dto';
+import { BulkHotelStatusDto, CreateHotelDto, HotelListQueryDto, SetHotelMediaDto, UpdateHotelDto } from './dto/hotel.dto';
 import { StatusChangeDto } from './dto/status-change.dto';
 import { HotelService, PublicHotelDetail } from './hotel.service';
 import { HotelStatus } from './schemas/hotel.schema';
@@ -30,6 +30,13 @@ export class AdminHotelsController {
     return this.hotels.create(dto, request.user);
   }
 
+  @Patch('bulk-status')
+  @RequirePermission('hotels.edit')
+  @ApiOperation({ summary: 'Bulk update status for multiple selected hotels' })
+  bulkStatus(@Body() dto: BulkHotelStatusDto, @Req() request: StaffRequest) {
+    return this.hotels.bulkStatusUpdate(dto, request.user);
+  }
+
   @Get(':id')
   @RequirePermission('hotels.view')
   get(@Param('id') id: string, @Req() request: StaffRequest) {
@@ -40,6 +47,13 @@ export class AdminHotelsController {
   @RequirePermission('hotels.edit')
   update(@Param('id') id: string, @Body() dto: UpdateHotelDto, @Req() request: StaffRequest) {
     return this.hotels.update(id, dto, request.user);
+  }
+
+  @Post(':id/media')
+  @RequirePermission('hotels.edit')
+  @ApiOperation({ summary: 'Update photo gallery and primary image for a hotel' })
+  updateMedia(@Param('id') id: string, @Body() dto: SetHotelMediaDto, @Req() request: StaffRequest) {
+    return this.hotels.updateMedia(id, dto, request.user);
   }
 
   @Post(':id/publish')

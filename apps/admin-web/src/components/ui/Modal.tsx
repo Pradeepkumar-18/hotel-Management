@@ -6,6 +6,7 @@ export interface ModalProps {
   subtitle?: string;
   onClose: () => void;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   wide?: boolean;
   size?: 'small' | 'medium' | 'wide' | 'full';
   className?: string;
@@ -24,6 +25,7 @@ export function Modal({
   subtitle,
   onClose,
   children,
+  footer,
   wide = false,
   size,
   className = '',
@@ -67,6 +69,11 @@ export function Modal({
           </button>
         </header>
         <div className="modal-body p-6 flex-1 overflow-y-auto">{children}</div>
+        {footer && (
+          <footer className="modal-footer p-4 border-t border-slate-200 bg-slate-50 sticky bottom-0 z-10 flex justify-end">
+            {footer}
+          </footer>
+        )}
       </section>
     </div>
   );

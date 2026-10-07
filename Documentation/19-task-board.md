@@ -16,7 +16,7 @@ Status values: `TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`. No tasks are marked don
 - [x] Inventory by room type and local stay date; blocks and total-room changes (bounded initialization, exclusive date ranges, scoped calendar, audited blocks, and guarded room-count updates; replica-set integration tests pass for initialization, blocks, and capacity safeguards).
 - [x] Base rate setup and hotel publication workflow (API and admin screens implemented; replica-set integration tests pass for optimistic rate versioning, audit records, and publication gates for policy, rates, and future inventory).
 - [x] Admin property setup UI & Modular Architecture (Refactored `apps/admin-web` to 1-component-per-file modular architecture with Tailwind CSS v4, Staywise brand forest green & lime green theme, standardized `Button` primitive, scaled typography & icons, and flexbox alignment fixes; production build verified).
-- [ ] Planned Hotel Backend Extensions (Media upload API `POST /admin/hotels/:id/media`, Mongoose text search index, backend multi-filter queries, `PATCH /admin/hotels/bulk-status`, and `POST /admin/hotels/import` bulk CSV endpoints).
+- [x] Planned Hotel Backend Extensions (Media upload API `POST /admin/hotels/:id/media`, Mongoose text search index, backend multi-filter queries, `PATCH /admin/hotels/bulk-status`, photo gallery modal, floating bulk directory action bar; verified NestJS API and React admin web builds).
 - [ ] Public hotel detail and search UI/API (detail endpoint exists; search, quote, tax decisions and guest UI remain).
 
 ## Sprint 2 — Availability and booking

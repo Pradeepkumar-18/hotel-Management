@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsEmail,
   IsEnum,
@@ -77,9 +79,30 @@ export class UpdateHotelDto {
   @IsOptional() @IsLongitude() longitude?: number;
 }
 
+export class HotelMediaItemDto {
+  @IsString() @MinLength(5) @MaxLength(1000) url: string;
+  @IsOptional() isPrimary?: boolean;
+  @IsOptional() @IsString() @MaxLength(200) caption?: string;
+  @IsOptional() @IsInt() @Min(0) displayOrder?: number;
+}
+
+export class SetHotelMediaDto {
+  @IsInt() @Min(0) version: number;
+  @IsArray() @ValidateNested({ each: true }) @Type(() => HotelMediaItemDto) media: HotelMediaItemDto[];
+}
+
+export class BulkHotelStatusDto {
+  @IsArray() @IsString({ each: true }) @ArrayMinSize(1) @ArrayMaxSize(100) hotelIds: string[];
+  @IsEnum(HotelStatus) status: HotelStatus;
+  @IsOptional() @IsString() @MaxLength(500) reason?: string;
+}
+
 export class HotelListQueryDto {
   @IsOptional() @IsInt() @Type(() => Number) @Min(1) @Max(100) limit = 25;
   @IsOptional() @IsInt() @Type(() => Number) @Min(0) offset = 0;
   @IsOptional() @IsEnum(HotelStatus) status?: HotelStatus;
   @IsOptional() @IsString() @MaxLength(120) city?: string;
+  @IsOptional() @IsString() @MaxLength(100) search?: string;
+  @IsOptional() @IsString() @MaxLength(30) setupStatus?: string;
 }
+

@@ -35,6 +35,8 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 
 export type StaffMe = { user: { id: string; email: string }; roles: string[]; permissions: string[]; hotelIds: string[] };
 
+export type HotelMediaItem = { url: string; isPrimary?: boolean; caption?: string; displayOrder?: number };
+
 export type Hotel = {
   _id: string;
   name: string;
@@ -47,6 +49,7 @@ export type Hotel = {
   primaryImage?: string;
   heroImage?: string;
   images?: string[];
+  media?: HotelMediaItem[];
   address: { city: string; countryCode: string; line1?: string; postalCode?: string };
   cancellationPolicy?: {
     effectiveFrom: string;
@@ -58,3 +61,18 @@ export type Hotel = {
 
 export type RoomType = { _id: string; id?: string; hotelId: string; name: string; code: string; totalRooms: number; maxAdults: number; maxChildren: number; version: number; status: string };
 export type InventoryDay = { stayDate: string; total: number; available: number; held: number; confirmed: number; blocked: number; version: number };
+
+export async function updateHotelMedia(id: string, version: number, media: HotelMediaItem[]): Promise<Hotel> {
+  return request<Hotel>(`/admin/hotels/${id}/media`, {
+    method: 'POST',
+    body: JSON.stringify({ version, media }),
+  });
+}
+
+export async function bulkUpdateHotelStatus(hotelIds: string[], status: string, reason?: string): Promise<{ modifiedCount: number; status: string }> {
+  return request<{ modifiedCount: number; status: string }>('/admin/hotels/bulk-status', {
+    method: 'PATCH',
+    body: JSON.stringify({ hotelIds, status, reason }),
+  });
+}
+

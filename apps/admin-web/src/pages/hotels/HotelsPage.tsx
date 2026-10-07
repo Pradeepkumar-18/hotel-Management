@@ -11,17 +11,20 @@ import {
   PauseCircle,
   Archive,
   MapPin,
-  MoreVertical,
   SlidersHorizontal,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Image,
+  Check,
+  X
 } from 'lucide-react';
-import { Hotel, request, StaffMe } from '../../api';
+import { Hotel, request, StaffMe, bulkUpdateHotelStatus } from '../../api';
 import { AsyncButton, useToast } from '../../ui-feedback';
 import { PageHeading, Button, DataTable, Column } from '../../components/ui';
 import { readId } from '../../utils/helpers';
 import { HotelCreateModal } from '../../features/hotels/HotelCreateModal';
 import { HotelWorkspace } from '../../features/hotels/HotelWorkspace';
+import { HotelMediaModal } from '../../features/hotels/HotelMediaModal';
 
 type HotelList = { items: Hotel[]; total: number };
 
@@ -32,6 +35,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Hotel | null>(null);
+  const [mediaTargetHotel, setMediaTargetHotel] = useState<Hotel | null>(null);
   const [statusCounts, setStatusCounts] = useState<Record<string, number> | null>(null);
 
   // Filters & Search State
@@ -41,6 +45,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
   const [setupFilter, setSetupFilter] = useState('ALL');
   const [timeFilter, setTimeFilter] = useState('ALL');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
 
   // Pagination State
   const [pageSize, setPageSize] = useState(10);
@@ -143,6 +148,20 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     return { completed, total: 5, percent };
   };
 
+  // Bulk status update handler
+  const handleBulkStatus = async (status: string) => {
+    if (selectedIds.size === 0) return;
+    try {
+      const ids = Array.from(selectedIds);
+      const res = await bulkUpdateHotelStatus(ids, status, `Bulk action by ${staff.user.email}`);
+      toast.success(`Successfully updated status for ${res.modifiedCount} hotel(s).`);
+      setSelectedIds(new Set());
+      void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update selected hotels.');
+    }
+  };
+
   // Reusable Columns Definition for DataTable
   const columns: Column<Hotel>[] = [
     {
@@ -173,14 +192,19 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
       header: 'Hotel',
       cell: (h) => (
         <div className="flex items-center gap-3 min-w-[200px]">
-          <div className="w-10 h-10 rounded-lg bg-[#e9f3ee] text-[#1e6354] flex items-center justify-center shrink-0 border border-[#c2dcd0] overflow-hidden relative shadow-2xs">
-            {/* @ts-ignore */}
+          <div
+            className="w-10 h-10 rounded-lg bg-[#e9f3ee] text-[#1e6354] flex items-center justify-center shrink-0 border border-[#c2dcd0] overflow-hidden relative shadow-2xs cursor-pointer group"
+            onClick={e => {
+              e.stopPropagation();
+              setMediaTargetHotel(h);
+            }}
+            title="Click to manage photo gallery"
+          >
             {h.primaryImage || h.heroImage ? (
               <img
-                /* @ts-ignore */
                 src={h.primaryImage || h.heroImage}
                 alt={h.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
               />
             ) : (
               <Building2 size={20} className="text-[#1e6354]" />
@@ -265,19 +289,20 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
           <Button
             variant="outline"
             size="sm"
+            leftIcon={<Image size={14} />}
+            onClick={() => setMediaTargetHotel(h)}
+            title="Manage photo gallery"
+          >
+            Photos
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             rightIcon={<ExternalLink size={14} />}
             onClick={() => setSelected(h)}
           >
             Open workspace
           </Button>
-          <button
-            type="button"
-            className="p-1.5 text-[#73827b] hover:text-[#20322d] hover:bg-[#f4f6f3] rounded-lg transition-colors cursor-pointer"
-            onClick={() => setSelected(h)}
-            title="More options"
-          >
-            <MoreVertical size={16} />
-          </button>
         </div>
       ),
     },
@@ -371,6 +396,49 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
           </span>
         </div>
       </div>
+
+      {/* Multi-Select Floating Bulk Selection Bar */}
+      {selectedIds.size > 0 && (
+        <div className="p-3 bg-[#173f36] text-white rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <span className="w-6 h-6 rounded-full bg-[#d6ef9e] text-[#173f36] flex items-center justify-center font-bold">
+              {selectedIds.size}
+            </span>
+            <span>{selectedIds.size} property {selectedIds.size === 1 ? 'selected' : 'selected'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-1.5 text-xs font-bold bg-[#1e6354] hover:bg-[#164d42] text-white rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+              onClick={() => handleBulkStatus('PUBLISHED')}
+            >
+              <Check size={14} /> Publish Selected
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1.5 text-xs font-bold bg-[#7c2d12] hover:bg-[#9a3412] text-white rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+              onClick={() => handleBulkStatus('SUSPENDED')}
+            >
+              <PauseCircle size={14} /> Pause Selected
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1.5 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+              onClick={() => handleBulkStatus('ARCHIVED')}
+            >
+              <Archive size={14} /> Archive Selected
+            </button>
+            <button
+              type="button"
+              className="p-1.5 text-white/70 hover:text-white rounded-lg transition-colors cursor-pointer ml-1"
+              onClick={() => setSelectedIds(new Set())}
+              title="Clear selection"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Unified Reusable DataTable Component */}
       <DataTable<Hotel>
@@ -535,6 +603,18 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
             void load();
           }}
           staff={staff}
+        />
+      )}
+
+      {/* Hotel Media Gallery Modal */}
+      {mediaTargetHotel && (
+        <HotelMediaModal
+          hotel={mediaTargetHotel}
+          onClose={() => setMediaTargetHotel(null)}
+          onSaved={() => {
+            setMediaTargetHotel(null);
+            void load();
+          }}
         />
       )}
     </div>

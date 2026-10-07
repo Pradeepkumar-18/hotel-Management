@@ -9,7 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { InjectConnection } from '@nestjs/mongoose';
 import { ClientSession, Connection, Model, Types } from 'mongoose';
 import { AuditService } from '../audit/audit.service';
-import { CreateHotelDto, HotelListQueryDto, UpdateHotelDto } from './dto/hotel.dto';
+import { BulkHotelStatusDto, CreateHotelDto, HotelListQueryDto, SetHotelMediaDto, UpdateHotelDto } from './dto/hotel.dto';
 import { Hotel, HotelAddress, HotelDocument, HotelStatus } from './schemas/hotel.schema';
 import { StaffPrincipal } from '../../common/auth/staff-permission.guard';
 import { TransactionService } from '../../common/database/transaction.service';
@@ -56,6 +56,19 @@ export class HotelService {
     const filter: Record<string, unknown> = {};
     if (query.status) filter.status = query.status;
     if (query.city) filter['address.city'] = new RegExp(`^${escapeRegex(query.city.trim())}$`, 'i');
+    if (query.search?.trim()) {
+      const q = escapeRegex(query.search.trim());
+      filter.$or = [
+        { name: new RegExp(q, 'i') },
+        { slug: new RegExp(q, 'i') },
+        { 'address.city': new RegExp(q, 'i') },
+      ];
+    }
+    if (query.setupStatus === 'COMPLETED') {
+      filter.status = HotelStatus.PUBLISHED;
+    } else if (query.setupStatus === 'IN_PROGRESS') {
+      filter.status = { $ne: HotelStatus.PUBLISHED };
+    }
     if (actor.role !== 'SUPER_ADMIN') filter._id = { $in: (actor.hotelIds || []).map(asObjectId) };
     const [items, total] = await Promise.all([
       this.hotelModel.find(filter).sort({ name: 1 }).skip(query.offset).limit(query.limit).lean(),
@@ -63,6 +76,74 @@ export class HotelService {
     ]);
     return { items, total, limit: query.limit, offset: query.offset };
   }
+
+  async updateMedia(id: string, dto: SetHotelMediaDto, actor: StaffPrincipal) {
+    assertHotelScope(actor, id);
+    const hotel = await this.getById(id, actor);
+    if (hotel.version !== dto.version) {
+      throw new ConflictException({ error: 'CONCURRENCY_CONFLICT', message: 'Hotel document was updated by another request' });
+    }
+
+    const mediaList = dto.media.map((item, idx) => ({
+      url: item.url.trim(),
+      isPrimary: !!item.isPrimary,
+      caption: item.caption?.trim(),
+      displayOrder: item.displayOrder ?? idx,
+    }));
+
+    const primaryItem = mediaList.find((m) => m.isPrimary) || mediaList[0];
+    const primaryImage = primaryItem ? primaryItem.url : undefined;
+
+    return this.transactions.executeInTransaction(async (session) => {
+      const updated = await this.hotelModel.findOneAndUpdate(
+        { _id: asObjectId(id), version: dto.version },
+        {
+          $set: {
+            media: mediaList,
+            primaryImage,
+          },
+          $inc: { version: 1 },
+        },
+        { new: true, session },
+      );
+      if (!updated) {
+        throw new ConflictException({ error: 'CONCURRENCY_CONFLICT', message: 'Hotel document version conflict' });
+      }
+      await this.writeAudit(session, actor, 'hotel.media_update', updated, hotel, updated.toObject());
+      return updated;
+    });
+  }
+
+  async bulkStatusUpdate(dto: BulkHotelStatusDto, actor: StaffPrincipal) {
+    const objectIds = dto.hotelIds.map(asObjectId);
+    const filter: Record<string, unknown> = { _id: { $in: objectIds } };
+    if (actor.role !== 'SUPER_ADMIN') {
+      filter._id = { $in: (actor.hotelIds || []).map(asObjectId).filter((id) => objectIds.some((target) => target.equals(id))) };
+    }
+
+    return this.transactions.executeInTransaction(async (session) => {
+      const result = await this.hotelModel.updateMany(
+        filter,
+        { $set: { status: dto.status }, $inc: { version: 1 } },
+        { session },
+      );
+
+      await this.audit.log({
+        actorId: actor.id,
+        actorType: 'STAFF',
+        action: 'hotel.bulk_status_update',
+        resourceType: 'HOTEL',
+        resourceId: 'bulk',
+        outcome: 'SUCCESS',
+        reason: dto.reason,
+        metadata: { status: dto.status, modifiedCount: result.modifiedCount, hotelIds: dto.hotelIds },
+        session,
+      });
+
+      return { modifiedCount: result.modifiedCount, status: dto.status };
+    });
+  }
+
 
   async create(dto: CreateHotelDto, actor: StaffPrincipal) {
     validateTimezone(dto.timezone);

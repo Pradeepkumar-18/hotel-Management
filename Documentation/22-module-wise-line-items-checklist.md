@@ -44,9 +44,9 @@
 - [ ] Add cancellation, check-in, checkout, and guest policies
 - [x] Admin property directory UI, workspace drawer, and publication readiness checks
 - [x] Validate unique hotel slugs and required property details
-- [ ] Implement `POST /admin/hotels/:id/media` photo upload API with primary image selection and gallery ordering (Phase 2 planned)
-- [ ] Implement Mongoose text index and backend query multi-filters (`search`, `city`, `setupStatus`) on `GET /admin/hotels` (Phase 2 planned)
-- [ ] Implement `PATCH /admin/hotels/bulk-status` endpoint for multi-select row status updates (Phase 2 planned)
+- [x] Implement `POST /admin/hotels/:id/media` photo upload API with primary image selection, gallery ordering, and frontend modal primitive
+- [x] Implement Mongoose text index and backend query multi-filters (`search`, `city`, `setupStatus`) on `GET /admin/hotels`
+- [x] Implement `PATCH /admin/hotels/bulk-status` endpoint for multi-select floating action bar status updates
 - [ ] Implement `POST /admin/hotels/import` and `GET /admin/hotels/export` for bulk CSV property directory operations (Phase 4 planned)
 - [ ] Prevent disabling or deleting hotels with active confirmed stays without a resolution flow
 - [ ] Add hotel manager assignment and property scope in a later phase
