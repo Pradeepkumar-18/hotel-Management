@@ -1,5 +1,8 @@
 export * from './PageHeading';
 export * from './Field';
+export * from './Input';
+export * from './Select';
+export * from './Textarea';
 export * from './Alert';
 export * from './Status';
 export * from './Modal';
@@ -8,4 +11,5 @@ export * from './LoadingRows';
 export * from './MetricCard';
 export * from './KpiStrip';
 export * from './Button';
+export * from './Pagination';
 export * from './DataTable';

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Image, Plus, Star, Trash2 } from 'lucide-react';
 import { Hotel, HotelMediaItem, updateHotelMedia } from '../../api';
-import { Modal, Field, Button, Alert } from '../../components/ui';
-import { AsyncButton, useToast } from '../../ui-feedback';
+import { Modal, Field, Input, Button, Alert } from '../../components/ui';
+import { useToast } from '../../ui-feedback';
 
 export interface HotelMediaModalProps {
   hotel: Hotel;
@@ -16,7 +16,7 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
     if (hotel.media && hotel.media.length > 0) {
       return hotel.media;
     }
-    const legacy = [];
+    const legacy: HotelMediaItem[] = [];
     if (hotel.primaryImage || hotel.heroImage) {
       legacy.push({ url: (hotel.primaryImage || hotel.heroImage)!, isPrimary: true, caption: 'Primary Hero' });
     }
@@ -33,6 +33,7 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
   const [newUrl, setNewUrl] = useState('');
   const [newCaption, setNewCaption] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const addImage = () => {
     const trimmed = newUrl.trim();
@@ -83,6 +84,7 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
 
   const handleSave = async () => {
     setError('');
+    setSaving(true);
     try {
       const updated = await updateHotelMedia(hotel._id, hotel.version, mediaList);
       toast.success('Hotel photo gallery saved successfully.');
@@ -91,6 +93,8 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
       const msg = err instanceof Error ? err.message : 'Failed to update hotel media.';
       setError(msg);
       toast.error(msg);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -104,9 +108,9 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
           <Button variant="outline" size="md" onClick={onClose}>
             Cancel
           </Button>
-          <AsyncButton onClick={handleSave} className="btn-primary min-h-[42px] px-5 text-sm font-semibold rounded-lg bg-[#1e6354] hover:bg-[#164d42] text-white">
+          <Button variant="primary" size="md" isLoading={saving} loadingLabel="Saving changes…" onClick={handleSave}>
             Save Changes
-          </AsyncButton>
+          </Button>
         </div>
       }
     >
@@ -114,14 +118,13 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
         {error && <Alert tone="error">{error}</Alert>}
 
         {/* Add New Image Form */}
-        <div className="p-4 bg-[#f8faf8] border border-[#e4e9e3] rounded-xl space-y-3">
-          <span className="text-xs font-bold text-[#33483e] uppercase tracking-wider block">Add Photo to Gallery</span>
+        <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-xl space-y-3">
+          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Add Photo to Gallery</span>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
               <Field label="Image URL">
-                <input
+                <Input
                   type="url"
-                  className="input w-full bg-white border border-[#d8e0da] rounded-lg h-9 px-3 text-xs"
                   placeholder="https://images.unsplash.com/photo-1566073771259-6a8506099945"
                   value={newUrl}
                   onChange={e => setNewUrl(e.target.value)}
@@ -130,9 +133,8 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
             </div>
             <div>
               <Field label="Caption (Optional)">
-                <input
+                <Input
                   type="text"
-                  className="input w-full bg-white border border-[#d8e0da] rounded-lg h-9 px-3 text-xs"
                   placeholder="Lobby View"
                   value={newCaption}
                   onChange={e => setNewCaption(e.target.value)}
@@ -149,12 +151,12 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
 
         {/* Gallery Grid */}
         <div className="space-y-2">
-          <span className="text-xs font-bold text-[#73827b] uppercase tracking-wider block">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
             Gallery Photos ({mediaList.length})
           </span>
           {mediaList.length === 0 ? (
-            <div className="p-6 text-center border-2 border-dashed border-[#e4e9e3] rounded-xl text-xs text-[#73827b]">
-              <Image size={24} className="mx-auto mb-2 text-[#92b3a3]" />
+            <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-500">
+              <Image size={24} className="mx-auto mb-2 text-slate-400" />
               No gallery images added yet. Add an image URL above to set the primary hero photo.
             </div>
           ) : (
@@ -163,16 +165,16 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
                 <div
                   key={idx}
                   className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 ${
-                    item.isPrimary ? 'bg-[#f0f7f3] border-[#1e6354]' : 'bg-white border-[#e4e9e3]'
+                    item.isPrimary ? 'bg-emerald-50/50 border-[#1e6354]' : 'bg-white border-slate-200'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-14 h-14 rounded-lg bg-[#e9f3ee] border border-[#c2dcd0] overflow-hidden shrink-0 relative">
+                    <div className="w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative">
                       <img src={item.url} alt={item.caption || 'Hotel photo'} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <b className="text-xs font-bold text-[#20322d] truncate">{item.caption || `Photo ${idx + 1}`}</b>
-                      <span className="text-[11px] text-[#73827b] truncate font-mono">{item.url}</span>
+                      <b className="text-xs font-bold text-slate-900 truncate">{item.caption || `Photo ${idx + 1}`}</b>
+                      <span className="text-[11px] text-slate-400 truncate font-mono">{item.url}</span>
                       {item.isPrimary && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#1e6354] mt-0.5">
                           <Star size={11} className="fill-[#1e6354]" /> Primary Hero Photo
@@ -185,7 +187,7 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
                     {!item.isPrimary && (
                       <button
                         type="button"
-                        className="p-1.5 text-[#73827b] hover:text-[#1e6354] hover:bg-white rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-slate-400 hover:text-[#1e6354] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                         title="Set as primary hero photo"
                         onClick={() => setPrimary(idx)}
                       >
@@ -194,7 +196,7 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
                     )}
                     <button
                       type="button"
-                      className="p-1.5 text-[#73827b] hover:text-[#b91c1c] hover:bg-[#fee2e2] rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       title="Remove photo"
                       onClick={() => removeImage(idx)}
                     >

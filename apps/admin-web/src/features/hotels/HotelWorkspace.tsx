@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { BedDouble, Check, Plus } from 'lucide-react';
 import { Hotel, request, RoomType, StaffMe } from '../../api';
-import { AsyncButton, useBusyGuard, useToast } from '../../ui-feedback';
-import { Field, Modal, Status } from '../../components/ui';
+import { useBusyGuard, useToast } from '../../ui-feedback';
+import { Button, Field, Input, Modal, Select, Status } from '../../components/ui';
 import { isoToday, readId } from '../../utils/helpers';
 import { RoomCreateModal } from '../rooms/RoomCreateModal';
 
@@ -50,7 +51,7 @@ export function HotelWorkspace({
       }
     });
 
-  const savePolicy = (e: React.FormEvent<HTMLFormElement>) => {
+  const savePolicy = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const fee = (prefix: string) => {
@@ -88,18 +89,20 @@ export function HotelWorkspace({
     <Modal title={hotel.name} subtitle={`${hotel.address?.city} · ${hotel.timezone} · Property workspace`} onClose={onClose} wide>
       <div className="workspace-top flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <Status status={hotel.status} />
+          <Status status={hotel.status} variant="pill" />
           <span className="workspace-slug text-xs font-mono text-slate-400">/{hotel.slug}</span>
         </div>
         {staff.permissions.includes('hotels.publish') && hotel.status !== 'PUBLISHED' && (
-          <AsyncButton
-            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
-            busy={busy}
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Check size={15} />}
+            isLoading={busy}
             loadingLabel="Publishing property…"
             onClick={publish}
           >
-            <Check size={15} /> Publish property
-          </AsyncButton>
+            Publish property
+          </Button>
         )}
       </div>
 
@@ -129,76 +132,67 @@ export function HotelWorkspace({
             <p className="text-xs text-slate-500">{rooms.length ? `${rooms.length} room type${rooms.length === 1 ? '' : 's'} configured` : 'Create a room type to start selling stays.'}</p>
           </div>
           {staff.permissions.includes('room_types.create') && (
-            <button
-              className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-300 rounded-lg text-xs flex items-center gap-1 transition-colors"
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Plus size={14} />}
               onClick={() => setShowRoom(true)}
             >
-              <Plus size={14} /> Add room
-            </button>
+              Add room
+            </Button>
           )}
         </div>
 
-        {rooms.length ? (
-          <div className="room-list border border-slate-200 rounded-xl divide-y divide-slate-100 bg-white">
-            {rooms.map(r => (
-              <div className="room-line p-3 flex items-center gap-3" key={readId(r)}>
-                <span className="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
-                  <BedDouble size={16} />
-                </span>
-                <span className="room-copy flex-1 min-w-0">
-                  <b className="block text-xs font-semibold text-slate-900">{r.name}</b>
-                  <small className="text-[11px] text-slate-500 block truncate">
-                    {r.code} · up to {r.maxAdults} adults · {r.totalRooms} rooms
-                  </small>
-                </span>
-                <Status status={r.status} />
-              </div>
-            ))}
+        {rooms.length === 0 ? (
+          <div className="p-4 border border-dashed border-slate-200 rounded-lg text-xs text-slate-500 text-center">
+            No rooms yet. Add at least one room category to configure inventory and pricing.
           </div>
         ) : (
-          <div className="p-4 border border-dashed border-slate-300 rounded-xl bg-slate-50/50 text-center text-xs text-slate-500">
-            No room types yet. Add your first room category.
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {rooms.map((room) => (
+              <div key={readId(room)} className="p-3 border border-slate-200 rounded-lg bg-white flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                    <BedDouble size={14} />
+                  </span>
+                  <div>
+                    <b className="font-semibold text-slate-800 block">{room.name}</b>
+                    <span className="text-[11px] text-slate-400 font-mono">{room.code} · {room.totalRooms} rooms</span>
+                  </div>
+                </div>
+                <Status status={room.status} variant="dot" />
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      <div className="workspace-section policy-section pt-4 border-t border-slate-200 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Cancellation terms</h3>
-            <p className="text-xs text-slate-500">Enter the terms this property will honor. No default policy is assumed.</p>
-          </div>
-          {hotel.cancellationPolicy && (
-            <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
-              <Check size={14} /> Policy saved
-            </span>
-          )}
+      <div className="workspace-section space-y-3 pt-4 border-t border-slate-100">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900">Cancellation & check-in policy</h3>
+          <p className="text-xs text-slate-500">Explicit guest terms stored with every booking snapshot.</p>
         </div>
 
-        <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={savePolicy}>
-          <Field label="Effective from">
-            <input
+        <form onSubmit={savePolicy} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Effective date" required>
+            <Input
               type="date"
               name="effectiveFrom"
               required
               defaultValue={hotel.cancellationPolicy?.effectiveFrom || isoToday(hotel.timezone)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </Field>
 
-          <Field label="Free cancellation cutoff">
-            <div className="flex items-center border border-slate-300 rounded-lg bg-slate-50 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
-              <input
-                type="number"
-                name="cutoff"
-                required
-                min="0"
-                max="8760"
-                defaultValue={hotel.cancellationPolicy?.freeCancellationHoursBeforeCheckIn ?? 24}
-                className="w-full px-3 py-2 bg-transparent text-xs text-slate-800 focus:outline-none"
-              />
-              <span className="px-2.5 text-[11px] text-slate-500 shrink-0 font-medium">hours before check-in</span>
-            </div>
+          <Field label="Free cancellation cutoff" required>
+            <Input
+              type="number"
+              name="cutoff"
+              required
+              min="0"
+              max="8760"
+              defaultValue={hotel.cancellationPolicy?.freeCancellationHoursBeforeCheckIn ?? 24}
+              rightIcon={<span className="text-[11px] font-medium text-slate-500">hours before check-in</span>}
+            />
           </Field>
 
           <FeeField label="After cutoff" prefix="after" initial={hotel.cancellationPolicy?.afterCutoff} />
@@ -207,14 +201,15 @@ export function HotelWorkspace({
           <div className="col-span-full space-y-2 pt-2">
             <small className="text-[11px] text-slate-400 block">Any fixed fee must use the same currency as the property's room rates.</small>
             {staff.permissions.includes('hotels.edit') && (
-              <AsyncButton
+              <Button
                 type="submit"
-                className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-300 rounded-lg text-xs transition-colors shadow-2xs"
-                busy={busy}
+                variant="outline"
+                size="sm"
+                isLoading={busy}
                 loadingLabel="Saving terms…"
               >
                 Save cancellation terms
-              </AsyncButton>
+              </Button>
             )}
           </div>
         </form>
@@ -240,21 +235,20 @@ function FeeField({ label, prefix, initial }: { label: string; prefix: string; i
   return (
     <div className="field flex flex-col gap-1.5">
       <label className="text-xs font-semibold text-slate-700">{label}</label>
-      <select
+      <Select
         name={`${prefix}Basis`}
         value={basis}
-        onChange={e => setBasis(e.target.value)}
-        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        onChange={(e) => setBasis(e.target.value)}
       >
         <option value="NO_FEE">No fee</option>
         <option value="FULL_STAY">Full stay amount</option>
         <option value="FIXED_MINOR_UNITS">Fixed amount</option>
         <option value="PERCENTAGE_BPS">Percentage</option>
-      </select>
+      </Select>
 
       {basis === 'FIXED_MINOR_UNITS' && (
         <div className="grid grid-cols-2 gap-2 mt-1">
-          <input
+          <Input
             aria-label={`${label} amount in minor units`}
             type="number"
             min="0"
@@ -263,9 +257,8 @@ function FeeField({ label, prefix, initial }: { label: string; prefix: string; i
             required
             defaultValue={initial?.amountMinorUnits}
             placeholder="Amount (minor units)"
-            className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none"
           />
-          <input
+          <Input
             aria-label={`${label} currency code`}
             name={`${prefix}Currency`}
             required
@@ -273,14 +266,14 @@ function FeeField({ label, prefix, initial }: { label: string; prefix: string; i
             maxLength={3}
             defaultValue={initial?.currency}
             placeholder="ISO currency"
-            className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-800 uppercase font-mono focus:outline-none"
+            className="uppercase font-mono"
           />
         </div>
       )}
 
       {basis === 'PERCENTAGE_BPS' && (
-        <div className="flex items-center border border-slate-300 rounded-lg bg-slate-50 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 mt-1">
-          <input
+        <div className="mt-1">
+          <Input
             type="number"
             min="0"
             max="100"
@@ -288,9 +281,8 @@ function FeeField({ label, prefix, initial }: { label: string; prefix: string; i
             name={`${prefix}Percent`}
             required
             defaultValue={initial?.percentageBps !== undefined ? initial.percentageBps / 100 : ''}
-            className="w-full px-3 py-1.5 bg-transparent text-xs text-slate-800 focus:outline-none"
+            rightIcon={<span className="text-[11px] font-medium text-slate-500">% of stay</span>}
           />
-          <span className="px-2.5 text-[11px] text-slate-500 shrink-0 font-medium">% of stay</span>
         </div>
       )}
     </div>

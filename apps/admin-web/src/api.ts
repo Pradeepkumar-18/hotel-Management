@@ -50,6 +50,7 @@ export type Hotel = {
   heroImage?: string;
   images?: string[];
   media?: HotelMediaItem[];
+  contact?: { email?: string; phone?: string };
   address: { city: string; countryCode: string; line1?: string; postalCode?: string };
   cancellationPolicy?: {
     effectiveFrom: string;

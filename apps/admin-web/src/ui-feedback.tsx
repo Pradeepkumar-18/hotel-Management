@@ -65,23 +65,7 @@ export function Spinner({ size = 16 }: { size?: number }) {
   return <LoaderCircle className="ui-spinner" size={size} aria-hidden="true" />;
 }
 
-type AsyncButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & { busy?: boolean; loadingLabel?: string; onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void | Promise<void> };
-export function AsyncButton({ busy = false, loadingLabel, disabled, onClick, children, className = '', type, ...props }: AsyncButtonProps) {
-  const clickLock = useRef(false);
-  const [clickBusy, setClickBusy] = useState(false);
-  const isBusy = busy || clickBusy;
-  const handleClick: React.MouseEventHandler<HTMLButtonElement> = event => {
-    if (isBusy || disabled) { event.preventDefault(); return; }
-    if (!onClick) return;
-    if (clickLock.current) { event.preventDefault(); return; }
-    clickLock.current = true;
-    const result = onClick(event);
-    if (result && typeof (result as Promise<void>).then === 'function') {
-      setClickBusy(true);
-      void Promise.resolve(result).then(() => { clickLock.current = false; setClickBusy(false); }, () => { clickLock.current = false; setClickBusy(false); });
-    } else clickLock.current = false;
-  };
-  return <button {...props} type={type || 'button'} className={`${className} ${isBusy ? 'button-loading' : ''}`.trim()} disabled={disabled || isBusy} aria-busy={isBusy || undefined} onClick={handleClick}>
-    {isBusy && <Spinner size={15} />}{isBusy && loadingLabel ? loadingLabel : children}
-  </button>;
-}
+import { Button, ButtonProps } from './components/ui/Button';
+
+export type AsyncButtonProps = ButtonProps;
+export const AsyncButton = Button;

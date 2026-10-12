@@ -39,6 +39,7 @@ This folder is the working product and engineering specification for **Staywise*
 | `21-ai-agent-rules.md` | Contributor and AI-agent working rules |
 | `22-module-wise-line-items-checklist.md` | Detailed one-line implementation checklist by hotel platform module |
 | `23-ui-generation-brief.md` | Page-by-page UI requirements and copy-ready generation prompt |
+| `24-sprint-2-availability-and-booking-plan.md` | Detailed architecture plan & implementation blueprint for Sprint 2 (Holds, Bookings, Guest Auth) |
 | `EXECUTION-ORDER.md` | Recommended reading order and how to use the docs while delivering work |
 | [`modules/README.md`](./modules/README.md) | Index and system-wide contracts for detailed module specifications |
 | `modules/availability-booking.md` | Deep design for the critical booking module |
