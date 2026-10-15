@@ -15,11 +15,11 @@ export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonE
 }
 
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
-  primary: 'bg-[#1e6354] hover:bg-[#164d42] active:bg-[#0f3d34] text-white border-transparent shadow-xs focus-visible:ring-[#1e6354]',
-  secondary: 'bg-[#e9f3ee] hover:bg-[#d5e8de] text-[#164d42] border-[#c2dcd0] focus-visible:ring-[#1e6354]',
-  outline: 'bg-white hover:bg-[#f6f8f5] text-[#42564c] border-[#d8e0da] shadow-2xs focus-visible:ring-[#1e6354]',
-  ghost: 'bg-transparent hover:bg-[#edf2ee] text-[#63736a] border-transparent focus-visible:ring-[#1e6354]',
-  danger: 'bg-[#a54d47] hover:bg-[#91433d] text-white border-transparent shadow-xs focus-visible:ring-[#a54d47]',
+  primary: 'bg-brand-primary hover:bg-brand-hover active:bg-brand-darkest text-white border-transparent shadow-xs focus-visible:ring-brand-primary',
+  secondary: 'bg-brand-pale hover:bg-emerald-100 text-brand-hover border-brand-border focus-visible:ring-brand-primary',
+  outline: 'bg-paper hover:bg-surface-subtle text-ink-deep border-line shadow-2xs focus-visible:ring-brand-primary',
+  ghost: 'bg-transparent hover:bg-surface-muted text-ink-muted border-transparent focus-visible:ring-brand-primary',
+  danger: 'bg-danger hover:bg-danger-hover text-white border-transparent shadow-xs focus-visible:ring-danger',
 };
 
 const sizeStyles: Record<NonNullable<ButtonProps['size']>, string> = {
@@ -97,10 +97,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {isBusy ? (
           <Loader2 className="w-4 h-4 animate-spin shrink-0" />
         ) : (
-          leftIcon && <span className="shrink-0 flex items-center">{leftIcon}</span>
+          leftIcon && <span className="shrink-0 inline-flex items-center">{leftIcon}</span>
         )}
-        <span className="truncate">{isBusy && loadingLabel ? loadingLabel : children}</span>
-        {!isBusy && rightIcon && <span className="shrink-0 flex items-center">{rightIcon}</span>}
+        <span className="truncate inline-flex items-center gap-1.5 whitespace-nowrap">
+          {isBusy && loadingLabel ? loadingLabel : children}
+        </span>
+        {!isBusy && rightIcon && <span className="shrink-0 inline-flex items-center">{rightIcon}</span>}
       </button>
     );
   }

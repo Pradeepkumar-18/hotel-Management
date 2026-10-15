@@ -6,7 +6,7 @@ import { Model } from 'mongoose';
 import { timingSafeEqual } from 'crypto';
 import { AuditService } from '../audit/audit.service';
 import type { StaffPrincipal } from '../../common/auth/staff-permission.guard';
-import { digest } from './auth.service';
+import { digest } from '../../common/crypto/digest';
 import { User, UserDocument } from './schemas/user.schema';
 import { StaffMembership, StaffMembershipDocument } from './schemas/staff-membership.schema';
 import { Role, RoleDocument } from './schemas/role.schema';

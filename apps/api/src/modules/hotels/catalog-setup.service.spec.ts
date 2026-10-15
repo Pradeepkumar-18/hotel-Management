@@ -7,6 +7,7 @@ import { AuditService } from '../audit/audit.service';
 import { NightInventory, NightInventoryDocument, NightInventorySchema } from '../inventory/schemas/night-inventory.schema';
 import { BaseRate, BaseRateDocument, BaseRateSchema } from '../pricing/schemas/base-rate.schema';
 import { HotelService } from './hotel.service';
+import { HotelPublishChecks } from './hotel-publish.checks';
 import { Hotel, HotelDocument, HotelSchema } from './schemas/hotel.schema';
 import { RoomType, RoomTypeDocument, RoomTypeSchema } from './schemas/room-type.schema';
 import { PricingService } from '../pricing/pricing.service';
@@ -40,7 +41,8 @@ describe('Sprint 1 catalog setup acceptance', () => {
     await Promise.all([hotelModel.init(), roomTypeModel.init(), baseRateModel.init(), inventoryModel.init(), auditModel.init()]);
     const audit = new AuditService(auditModel);
     const transactions = new TransactionService(connection);
-    hotels = new HotelService(connection, hotelModel, roomTypeModel, baseRateModel, inventoryModel, audit, transactions);
+    const publishChecks = new HotelPublishChecks(roomTypeModel, baseRateModel, inventoryModel);
+    hotels = new HotelService(connection, hotelModel, roomTypeModel, baseRateModel, inventoryModel, audit, transactions, publishChecks);
     pricing = new PricingService(roomTypeModel, baseRateModel, audit, transactions);
   });
 

@@ -45,3 +45,4 @@ AuditLogSchema.index({ resourceType: 1, resourceId: 1 });
 AuditLogSchema.index({ actorId: 1, createdAt: -1 });
 AuditLogSchema.index({ hotelId: 1, createdAt: -1 });
 AuditLogSchema.index({ action: 1, createdAt: -1 });
+AuditLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 365 });

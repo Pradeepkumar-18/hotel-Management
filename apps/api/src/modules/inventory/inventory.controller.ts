@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nest
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RequirePermission, StaffPermissionGuard, StaffPrincipal } from '../../common/auth/staff-permission.guard';
-import { InventoryAdjustmentDto, InventoryRangeDto } from './dto/inventory.dto';
+import { BatchInventoryAdjustmentDto, InventoryAdjustmentDto, InventoryRangeDto } from './dto/inventory.dto';
 import { InventoryCalendarResponse, InventoryService } from './inventory.service';
 
 type StaffRequest = Request & { user: StaffPrincipal };
@@ -26,6 +26,17 @@ export class InventoryController {
   @ApiOperation({ summary: 'Initialize missing nightly inventory for [from, to)' })
   initialize(@Param('roomTypeId') roomTypeId: string, @Body() range: InventoryRangeDto, @Req() request: StaffRequest) {
     return this.inventory.initialize(roomTypeId, range, request.user);
+  }
+
+  @Post('batch-adjust')
+  @RequirePermission('inventory.block')
+  @ApiOperation({ summary: 'Atomically block or unblock rooms across a date range' })
+  batchAdjust(
+    @Param('roomTypeId') roomTypeId: string,
+    @Body() dto: BatchInventoryAdjustmentDto,
+    @Req() request: StaffRequest,
+  ) {
+    return this.inventory.batchAdjust(roomTypeId, dto, request.user);
   }
 
   @Post(':stayDate/block')

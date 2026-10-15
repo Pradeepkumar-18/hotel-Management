@@ -24,13 +24,25 @@
 
   --color-brand-sage: #92b3a3;
   --color-brand-sage-dark: #668276;
+  --color-brand-border: #c2dcd0;
+
+  --color-surface-muted: #f1f5f1;
+  --color-surface-subtle: #fafbf9;
+  --color-line-subtle: #e7ebe7;
+  --color-ink-deep: #33483e;
+  --color-ink-light: #89958e;
+  --color-ink-faint: #9aa49d;
+
+  --color-danger: #e11d48;
+  --color-danger-hover: #be123c;
+  --color-danger-pale: #fff1f2;
 }
 
 :root {
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
-  color: #20322d;
-  background-color: #f4f6f3;
+  color: var(--color-ink);
+  background-color: var(--color-canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -45,8 +57,8 @@ body {
   margin: 0;
   min-width: 360px;
   min-height: 100vh;
-  background-color: #f4f6f3;
-  color: #20322d;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
   font-size: 0.95rem;
   line-height: 1.5;
 }
@@ -62,17 +74,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c6cdc8;
+  background: var(--color-ink-faint);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a4aea7;
+  background: var(--color-ink-muted);
 }
 
 /* Focus outline accessibility */
 :focus-visible {
-  outline: 2px solid #1e6354;
+  outline: 2px solid var(--color-brand-primary);
   outline-offset: 2px;
 }
 

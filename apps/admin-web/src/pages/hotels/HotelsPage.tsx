@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Building2, ExternalLink, Image, MapPin, Plus, Upload } from 'lucide-react';
-import { Hotel, request, StaffMe, bulkUpdateHotelStatus } from '../../api';
+import { Hotel, StaffMe, bulkUpdateHotelStatus, fetchHotelMetrics, HotelMetrics, isApiError } from '../../api';
 import { useToast } from '../../ui-feedback';
 import { PageHeading, Button, DataTable, Column, Status } from '../../components/ui';
 import { readId } from '../../utils/helpers';
@@ -10,72 +11,124 @@ import { HotelMediaModal } from '../../features/hotels/HotelMediaModal';
 import { HotelSummaryCards } from './components/HotelSummaryCards';
 import { HotelBulkActionsBar } from './components/HotelBulkActionsBar';
 import { HotelFiltersBar } from './components/HotelFiltersBar';
-
-type HotelList = { items: Hotel[]; total: number };
+import { BulkStatusConfirmModal } from './components/BulkStatusConfirmModal';
+import { useApiQuery, invalidate } from '../../hooks/useApiQuery';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { HotelStatus } from '../../features/hotels/hotel-status';
+import { listHotels, HotelList } from '../../features/hotels/hotels.api';
+import { Can } from '../../features/auth/Can';
+import { AccessPage } from '../error/AccessPage';
 
 export function HotelsPage({ staff }: { staff: StaffMe }) {
   const toast = useToast();
-  const [data, setData] = useState<HotelList | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Hotel | null>(null);
   const [mediaTargetHotel, setMediaTargetHotel] = useState<Hotel | null>(null);
-  const [statusCounts, setStatusCounts] = useState<Record<string, number> | null>(null);
 
-  // Filters & Search State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [locationFilter, setLocationFilter] = useState('ALL');
+  // Filters & Search State initialized from URL params
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'ALL');
+  const [locationFilter, setLocationFilter] = useState(() => searchParams.get('city') || 'ALL');
   const [setupFilter, setSetupFilter] = useState('ALL');
   const [timeFilter, setTimeFilter] = useState('ALL');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Pagination State
-  const [pageSize, setPageSize] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
+  // Pagination State initialized from URL params
+  const [pageSize, setPageSize] = useState(() => Math.max(1, parseInt(searchParams.get('pageSize') || '10', 10) || 10));
+  const [currentPage, setCurrentPage] = useState(() => Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1));
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const statuses = ['PUBLISHED', 'DRAFT', 'SUSPENDED', 'ARCHIVED'];
-      const [all, ...counts] = await Promise.all([
-        request<HotelList>('/admin/hotels?limit=100&offset=0'),
-        ...statuses.map((status) => request<HotelList>(`/admin/hotels?status=${status}&limit=1&offset=0`)),
-      ]);
-      setData(all);
-      setStatusCounts(Object.fromEntries(statuses.map((status, index) => [status, counts[index].total])));
-      setError('');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load hotels');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Bulk status modal state
+  const [bulkStatusTarget, setBulkStatusTarget] = useState<HotelStatus | null>(null);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    setCurrentPage(1);
+  }, [debouncedSearch, statusFilter, locationFilter, setupFilter]);
+
+  // Sync state to URL search parameters
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (debouncedSearch.trim()) next.set('search', debouncedSearch.trim());
+    else next.delete('search');
+
+    if (statusFilter !== 'ALL') next.set('status', statusFilter);
+    else next.delete('status');
+
+    if (locationFilter !== 'ALL') next.set('city', locationFilter);
+    else next.delete('city');
+
+    if (currentPage > 1) next.set('page', String(currentPage));
+    else next.delete('page');
+
+    if (pageSize !== 10) next.set('pageSize', String(pageSize));
+    else next.delete('pageSize');
+
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [debouncedSearch, statusFilter, locationFilter, currentPage, pageSize, searchParams, setSearchParams]);
+
+  // Sync state when browser navigation occurs (back/forward)
+  useEffect(() => {
+    const s = searchParams.get('search') || '';
+    if (s !== searchQuery) setSearchQuery(s);
+    const st = searchParams.get('status') || 'ALL';
+    if (st !== statusFilter) setStatusFilter(st);
+    const c = searchParams.get('city') || 'ALL';
+    if (c !== locationFilter) setLocationFilter(c);
+    const p = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
+    if (p !== currentPage) setCurrentPage(p);
+    const ps = Math.max(1, parseInt(searchParams.get('pageSize') || '10', 10) || 10);
+    if (ps !== pageSize) setPageSize(ps);
+  }, [searchParams]);
+
+  const hotelsQuery = useApiQuery<HotelList>(
+    (signal) => {
+      return listHotels(
+        {
+          limit: pageSize,
+          offset: (currentPage - 1) * pageSize,
+          status: statusFilter,
+          city: locationFilter,
+          setupStatus: setupFilter,
+          search: debouncedSearch,
+        },
+        signal,
+      );
+    },
+    [pageSize, currentPage, statusFilter, locationFilter, debouncedSearch, setupFilter],
+    { tags: ['hotels'] },
+  );
+
+  const metricsQuery = useApiQuery<HotelMetrics>(
+    (_signal) => fetchHotelMetrics(),
+    [],
+    { tags: ['hotels'] },
+  );
+
+  const data = hotelsQuery.data ?? null;
+  const loading = hotelsQuery.loading;
+  const error = hotelsQuery.error instanceof Error ? hotelsQuery.error.message : (hotelsQuery.error ? String(hotelsQuery.error) : '');
+
+  if (isApiError(hotelsQuery.error, 403)) {
+    return <AccessPage kind="unauthorized" />;
+  }
+
+  const statusCounts = useMemo(() => {
+    if (!metricsQuery.data) return null;
+    return {
+      PUBLISHED: metricsQuery.data.published,
+      DRAFT: metricsQuery.data.draft,
+      SUSPENDED: metricsQuery.data.suspended,
+      ARCHIVED: metricsQuery.data.archived,
+    };
+  }, [metricsQuery.data]);
 
   const canCreate = staff.permissions.includes('hotels.create');
-
-  // Filter logic
-  const filteredHotels = useMemo(() => {
-    if (!data?.items) return [];
-    return data.items.filter((h) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const nameMatch = h.name.toLowerCase().includes(q);
-        const slugMatch = h.slug.toLowerCase().includes(q);
-        const cityMatch = h.address?.city?.toLowerCase().includes(q);
-        const idMatch = readId(h).toLowerCase().includes(q);
-        if (!nameMatch && !slugMatch && !cityMatch && !idMatch) return false;
-      }
-      if (statusFilter !== 'ALL' && h.status !== statusFilter) return false;
-      if (locationFilter !== 'ALL' && h.address?.city !== locationFilter) return false;
-      return true;
-    });
-  }, [data?.items, searchQuery, statusFilter, locationFilter]);
 
   const uniqueLocations = useMemo(() => {
     if (!data?.items) return [];
@@ -86,12 +139,8 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     return Array.from(set);
   }, [data?.items]);
 
-  const paginatedHotels = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredHotels.slice(start, start + pageSize);
-  }, [filteredHotels, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(filteredHotels.length / pageSize) || 1;
+  const paginatedHotels = data?.items ?? [];
+  const totalPages = Math.ceil((data?.total ?? 0) / pageSize) || 1;
 
   const toggleSelectAll = () => {
     if (selectedIds.size === paginatedHotels.length) {
@@ -119,16 +168,34 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     return { completed, total: 5, percent: Math.round((completed / 5) * 100) };
   };
 
-  const handleBulkStatus = async (status: string) => {
+  const hasDraftSelected = useMemo(() => {
+    return paginatedHotels.some((h) => selectedIds.has(readId(h)) && h.status === 'DRAFT');
+  }, [paginatedHotels, selectedIds]);
+
+  const handleBulkStatusClick = (status: HotelStatus) => {
     if (selectedIds.size === 0) return;
+    setBulkStatusTarget(status);
+    setBulkConfirmOpen(true);
+  };
+
+  const handleConfirmBulkStatus = async (reason: string) => {
+    if (!bulkStatusTarget || selectedIds.size === 0) return;
+    setBulkLoading(true);
     try {
       const ids = Array.from(selectedIds);
-      const res = await bulkUpdateHotelStatus(ids, status, `Bulk action by ${staff.user.email}`);
-      toast.success(`Successfully updated status for ${res.modifiedCount} hotel(s).`);
+      const res = await bulkUpdateHotelStatus(ids, bulkStatusTarget, reason);
+      if (res.skipped && res.skipped.length > 0) {
+        toast.info(`${res.modifiedCount} updated. ${res.skipped.length} skipped (${res.skipped[0].message}).`);
+      } else {
+        toast.success(`Successfully updated status for ${res.modifiedCount} hotel(s).`);
+      }
       setSelectedIds(new Set());
-      void load();
+      setBulkConfirmOpen(false);
+      invalidate('hotels');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update selected hotels.');
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -138,7 +205,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
       header: (
         <input
           type="checkbox"
-          className="w-4 h-4 rounded border-slate-300 text-[#1e6354] focus:ring-[#1e6354] cursor-pointer"
+          className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary cursor-pointer"
           checked={selectedIds.size === paginatedHotels.length && paginatedHotels.length > 0}
           onChange={toggleSelectAll}
         />
@@ -147,7 +214,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         <div onClick={(e) => e.stopPropagation()}>
           <input
             type="checkbox"
-            className="w-4 h-4 rounded border-slate-300 text-[#1e6354] focus:ring-[#1e6354] cursor-pointer"
+            className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary cursor-pointer"
             checked={selectedIds.has(readId(h))}
             onChange={() => toggleSelectRow(readId(h))}
           />
@@ -162,7 +229,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
       cell: (h) => (
         <div className="flex items-center gap-3 min-w-[200px]">
           <div
-            className="w-10 h-10 rounded-lg bg-[#e9f3ee] text-[#1e6354] flex items-center justify-center shrink-0 border border-[#c2dcd0] overflow-hidden relative shadow-2xs cursor-pointer group"
+            className="w-10 h-10 rounded-lg bg-brand-pale text-brand-primary flex items-center justify-center shrink-0 border border-brand-border overflow-hidden relative shadow-2xs cursor-pointer group"
             onClick={(e) => {
               e.stopPropagation();
               setMediaTargetHotel(h);
@@ -176,12 +243,12 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
               />
             ) : (
-              <Building2 size={20} className="text-[#1e6354]" />
+              <Building2 size={20} className="text-brand-primary" />
             )}
           </div>
           <div className="flex flex-col min-w-0">
-            <b className="font-bold text-[#20322d] text-sm truncate">{h.name}</b>
-            <span className="text-xs text-[#73827b] font-mono leading-normal">/{h.slug}</span>
+            <b className="font-bold text-ink text-sm truncate">{h.name}</b>
+            <span className="text-xs text-ink-muted font-mono leading-normal">/{h.slug}</span>
           </div>
         </div>
       ),
@@ -191,12 +258,12 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
       header: 'Location',
       cell: (h) => (
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <MapPin size={15} className="text-[#73827b] shrink-0" />
+          <MapPin size={15} className="text-ink-muted shrink-0" />
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-[#33483e] leading-snug">
+            <span className="text-sm font-semibold text-ink-deep leading-snug">
               {h.address?.city || 'Not set'}, {h.address?.countryCode || 'IN'}
             </span>
-            <span className="text-xs text-[#89958e] leading-normal font-mono">
+            <span className="text-xs text-ink-light leading-normal font-mono">
               {h.address?.postalCode || '626123'}
             </span>
           </div>
@@ -216,13 +283,13 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         return (
           <div className="flex flex-col gap-1 w-36 whitespace-nowrap">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#73827b] font-medium">{progress.completed} of 5 completed</span>
-              <span className="font-bold text-[#20322d]">{progress.percent}%</span>
+              <span className="text-ink-muted font-medium">{progress.completed} of 5 completed</span>
+              <span className="font-bold text-ink">{progress.percent}%</span>
             </div>
-            <div className="w-full h-2 bg-[#e4e9e3] rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-line rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 rounded-full ${
-                  progress.percent === 100 ? 'bg-[#1e6354]' : progress.percent >= 60 ? 'bg-[#1e6354]' : 'bg-[#d97706]'
+                  progress.percent === 100 ? 'bg-brand-primary' : progress.percent >= 60 ? 'bg-brand-primary' : 'bg-amber-600'
                 }`}
                 style={{ width: `${progress.percent}%` }}
               />
@@ -275,11 +342,11 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
             >
               Import
             </Button>
-            {canCreate && (
+            <Can permission="hotels.create">
               <Button variant="primary" size="md" leftIcon={<Plus size={18} />} onClick={() => setOpen(true)}>
                 Add a hotel
               </Button>
-            )}
+            </Can>
           </div>
         }
       />
@@ -288,7 +355,8 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
 
       <HotelBulkActionsBar
         selectedCount={selectedIds.size}
-        onBulkStatus={handleBulkStatus}
+        hasDraftSelected={hasDraftSelected}
+        onBulkStatus={handleBulkStatusClick}
         onClearSelection={() => setSelectedIds(new Set())}
       />
 
@@ -313,15 +381,30 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         toolbarHeader={
           <HotelFiltersBar
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+            onSearchChange={(val) => {
+              setSearchQuery(val);
+              setCurrentPage(1);
+            }}
             statusFilter={statusFilter}
-            onStatusChange={setStatusFilter}
+            onStatusChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
             locationFilter={locationFilter}
-            onLocationChange={setLocationFilter}
+            onLocationChange={(val) => {
+              setLocationFilter(val);
+              setCurrentPage(1);
+            }}
             setupFilter={setupFilter}
-            onSetupChange={setSetupFilter}
+            onSetupChange={(val) => {
+              setSetupFilter(val);
+              setCurrentPage(1);
+            }}
             timeFilter={timeFilter}
-            onTimeChange={setTimeFilter}
+            onTimeChange={(val) => {
+              setTimeFilter(val);
+              setCurrentPage(1);
+            }}
             uniqueLocations={uniqueLocations}
             onColumnsClick={() => toast.info('Custom column ordering will be available in the upcoming phase.')}
           />
@@ -329,7 +412,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         pagination={{
           currentPage,
           totalPages,
-          totalItems: filteredHotels.length,
+          totalItems: data?.total ?? 0,
           pageSize,
           onPageChange: setCurrentPage,
           onPageSizeChange: (size) => {
@@ -340,13 +423,22 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         }}
       />
 
+      <BulkStatusConfirmModal
+        isOpen={bulkConfirmOpen}
+        onClose={() => setBulkConfirmOpen(false)}
+        status={bulkStatusTarget}
+        count={selectedIds.size}
+        onConfirm={handleConfirmBulkStatus}
+        loading={bulkLoading}
+      />
+
       {open && (
         <HotelCreateModal
           onClose={() => setOpen(false)}
           onCreated={(h) => {
             setOpen(false);
             setSelected(h);
-            void load();
+            invalidate('hotels');
           }}
         />
       )}
@@ -357,7 +449,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
           onClose={() => setSelected(null)}
           onSaved={(h) => {
             setSelected(h);
-            void load();
+            invalidate('hotels');
           }}
           staff={staff}
         />
@@ -369,7 +461,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
           onClose={() => setMediaTargetHotel(null)}
           onSaved={() => {
             setMediaTargetHotel(null);
-            void load();
+            invalidate('hotels');
           }}
         />
       )}

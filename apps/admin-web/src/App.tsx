@@ -1,37 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Compass } from 'lucide-react';
-import { ApiError, request, StaffMe } from './api';
+import { useAuth } from './features/auth/AuthContext';
 import { Spinner } from './ui-feedback';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AppLayout } from './layout/AppLayout';
 import { AppRoutes } from './routes/AppRoutes';
 
 export default function App() {
-  const [staff, setStaff] = useState<StaffMe | null>(null);
-  const [checking, setChecking] = useState(true);
-  const [error, setError] = useState('');
+  const { staff, loading, apiError, setStaffUser } = useAuth();
 
-  const checkSession = useCallback(async () => {
-    setChecking(true);
-    try {
-      setStaff(await request<StaffMe>('/auth/me'));
-      setError('');
-    } catch (err) {
-      setStaff(null);
-      if (!(err instanceof ApiError && err.status === 401)) {
-        setError('The Staywise API could not be reached. Check that it is running and try again.');
-      }
-    } finally {
-      setChecking(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void checkSession();
-  }, [checkSession]);
-
-  if (checking) {
+  if (loading) {
     return (
       <div className="boot-screen" role="status" aria-live="polite">
         <span className="brand-mark">
@@ -46,14 +24,14 @@ export default function App() {
   if (!staff) {
     return (
       <Routes>
-        <Route path="/admin/login" element={<LoginPage onLogin={setStaff} apiError={error} />} />
+        <Route path="/admin/login" element={<LoginPage onLogin={setStaffUser} apiError={apiError} />} />
         <Route path="*" element={<Navigate to="/admin/login" replace />} />
       </Routes>
     );
   }
 
   return (
-    <AppLayout staff={staff} setStaff={setStaff}>
+    <AppLayout staff={staff} setStaff={setStaffUser}>
       <AppRoutes staff={staff} />
     </AppLayout>
   );

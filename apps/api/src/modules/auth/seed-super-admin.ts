@@ -1,3 +1,8 @@
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../../../../../.env') });
+dotenv.config();
+
 import mongoose from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { PermissionSchema, RoleSchema } from './schemas/role.schema';

@@ -29,7 +29,7 @@ export function Pagination({
   const end = Math.min(currentPage * pageSize, totalItems);
 
   return (
-    <div className={cn('p-3.5 border-t border-[#e4e9e3] bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500', className)}>
+    <div className={cn('p-3.5 border-t border-line bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500', className)}>
       <div className="flex items-center gap-2">
         <span>
           Showing <strong className="font-semibold text-slate-700">{start}–{end}</strong> of{' '}
@@ -41,7 +41,7 @@ export function Pagination({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="text-xs bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1e6354]"
+              className="text-xs bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-primary"
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>

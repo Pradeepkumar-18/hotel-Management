@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Lock } from 'lucide-react';
 import { Button, Field, Input } from '../../../components/ui';
 
 interface BaseRateData {
@@ -14,6 +14,7 @@ interface BaseRatesViewProps {
   selectedHotelName?: string;
   rate: BaseRateData | null;
   roomId: string;
+  hotelCurrency?: string | null;
   canEditRates: boolean;
   busy: boolean;
   onSaveRate: (e: FormEvent<HTMLFormElement>) => void;
@@ -24,10 +25,14 @@ export function BaseRatesView({
   selectedHotelName,
   rate,
   roomId,
+  hotelCurrency,
   canEditRates,
   busy,
   onSaveRate,
 }: BaseRatesViewProps) {
+  const lockedCurrency = hotelCurrency || rate?.currency || null;
+  const currencyDefault = lockedCurrency || 'INR';
+
   return (
     <div
       className="rate-card max-w-xl bg-white border border-slate-200 rounded-xl p-6 shadow-2xs space-y-6"
@@ -66,15 +71,35 @@ export function BaseRatesView({
           />
         </Field>
         <Field label="Currency code" required>
-          <Input
-            name="currency"
-            required
-            pattern="[A-Za-z]{3}"
-            maxLength={3}
-            defaultValue={rate?.currency || ''}
-            placeholder="ISO 4217 (e.g. INR)"
-            className="uppercase font-mono"
-          />
+          <div className="relative">
+            <Input
+              name="currency"
+              required
+              pattern="[A-Za-z]{3}"
+              maxLength={3}
+              defaultValue={currencyDefault}
+              value={lockedCurrency ? currencyDefault : undefined}
+              readOnly={Boolean(lockedCurrency)}
+              placeholder="ISO 4217 (e.g. INR)"
+              className={`uppercase font-mono ${
+                lockedCurrency ? 'bg-slate-50 text-slate-600 cursor-not-allowed pr-8' : ''
+              }`}
+            />
+            {lockedCurrency && (
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" title={`Locked to property rate currency (${lockedCurrency})`}>
+                <Lock size={13} />
+              </span>
+            )}
+          </div>
+          {lockedCurrency ? (
+            <small className="text-[11px] text-slate-400 block mt-1">
+              Locked to property rate currency ({lockedCurrency}).
+            </small>
+          ) : (
+            <small className="text-[11px] text-slate-400 block mt-1">
+              Editable for first rate setup (defaults to INR).
+            </small>
+          )}
         </Field>
         <Field label="Reason for change" fullWidth required>
           <Input

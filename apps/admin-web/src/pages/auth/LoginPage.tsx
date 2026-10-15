@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Compass, ArrowRight } from 'lucide-react';
-import { request, setCsrfToken, StaffMe } from '../../api';
+import { isApiError, StaffMe } from '../../api';
 import { AsyncButton, useBusyGuard, useToast } from '../../ui-feedback';
 import { Alert, Field } from '../../components/ui';
+import { loginStaff, getStaffMe } from '../../features/auth/auth.api';
+import { homePath } from '../../routes/route-config';
 
 export function LoginPage({ onLogin, apiError }: { onLogin: (user: StaffMe) => void; apiError: string }) {
   const [email, setEmail] = useState('');
@@ -11,21 +13,34 @@ export function LoginPage({ onLogin, apiError }: { onLogin: (user: StaffMe) => v
   const [error, setError] = useState(apiError);
   const { busy, run } = useBusyGuard();
   const toast = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isExpired = (location.state as any)?.reason === 'expired';
+  const redirectFrom = (location.state as any)?.from;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     void run(async () => {
       setError('');
       try {
-        const login = await request<{ csrfToken: string }>('/auth/staff/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-        });
-        setCsrfToken(login.csrfToken);
-        onLogin(await request<StaffMe>('/auth/me'));
+        await loginStaff({ email, password });
+        const me = await getStaffMe();
+        onLogin(me);
         toast.success('Welcome back. You are signed in.');
+        navigate(redirectFrom || homePath(me), { replace: true });
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Sign in failed. Check your details and retry.');
+        if (isApiError(err)) {
+          const LOGIN_MESSAGES: Record<string, string> = {
+            AUTH_MFA_REQUIRED: 'Multi-factor sign-in is required for this account.',
+            ACCOUNT_LOCKED: 'Too many failed attempts. This account is locked for a few minutes.',
+            TOO_MANY_ATTEMPTS: err.message || 'Too many attempts. Please wait and try again.',
+            AUTH_INVALID_CREDENTIALS: 'Email or password is incorrect.',
+          };
+          setError(LOGIN_MESSAGES[err.code] || err.message || 'Email or password is incorrect.');
+        } else {
+          setError(err instanceof Error ? err.message : 'Sign in failed. Check your network connection.');
+        }
       }
     });
   };
@@ -48,30 +63,37 @@ export function LoginPage({ onLogin, apiError }: { onLogin: (user: StaffMe) => v
         </Link>
 
         <div className="my-auto py-12 space-y-5 max-w-md z-10">
-          <span className="w-10 h-1 bg-emerald-400 block rounded-full" />
-          <h1 className="text-3xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15]">
-            Make every stay
-            <br />
-            feel considered.
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
+            Enterprise Operations Portal
+          </div>
+          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight text-white">
+            Modern hotel management, built for clarity and speed.
           </h1>
-          <p className="text-sm text-emerald-200/90 font-medium leading-relaxed">
-            A calmer, high-performance operations platform built for modern hotel staff and property managers.
+          <p className="text-emerald-100/70 text-sm leading-relaxed">
+            Multi-property inventory, pricing controls, staff authorizations, and booking workflows in a single unified system.
           </p>
         </div>
 
-        <div className="text-[10px] font-bold tracking-widest text-emerald-400/80 uppercase z-10">
-          STAYWISE · OPERATIONS CONSOLE
+        <div className="text-xs text-emerald-200/50 flex items-center justify-between z-10">
+          <span>&copy; {new Date().getFullYear()} Staywise Systems</span>
+          <span className="font-mono text-[11px]">v0.1.0-alpha</span>
         </div>
       </div>
 
       {/* Right Login Form */}
-      <div className="flex items-center justify-center p-6 lg:p-14 bg-white">
-        <form className="w-full max-w-sm space-y-5" onSubmit={submit}>
+      <div className="bg-white flex items-center justify-center p-6 lg:p-12">
+        <form onSubmit={submit} className="w-full max-w-sm space-y-4">
           <div>
             <span className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-1 block">WELCOME BACK</span>
             <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Good to see you.</h2>
             <p className="text-xs text-slate-500 mt-1 leading-normal">Sign in with your staff account to access operations dashboard.</p>
           </div>
+
+          {isExpired && !error && (
+            <div className="min-h-[44px]">
+              <Alert tone="warning">Your session expired. Please sign in again.</Alert>
+            </div>
+          )}
 
           {error && (
             <div className="min-h-[44px]">
@@ -98,24 +120,24 @@ export function LoginPage({ onLogin, apiError }: { onLogin: (user: StaffMe) => v
               required
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder="••••••••••••"
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-all font-medium"
             />
           </Field>
 
-          <AsyncButton
-            type="submit"
-            busy={busy}
-            loadingLabel="Signing in…"
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-lg shadow-sm transition-colors text-xs cursor-pointer disabled:opacity-50"
-          >
-            <span>Sign in</span>
-            <ArrowRight size={15} />
-          </AsyncButton>
-
-          <p className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 text-center leading-normal">
-            Access is restricted to authorized Staywise staff members.
-          </p>
+          <div className="pt-2">
+            <AsyncButton
+              type="submit"
+              variant="primary"
+              size="md"
+              className="w-full"
+              isLoading={busy}
+              loadingLabel="Signing you in…"
+              rightIcon={<ArrowRight size={16} />}
+            >
+              Sign in to Staywise
+            </AsyncButton>
+          </div>
         </form>
       </div>
     </div>

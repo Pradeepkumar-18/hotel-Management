@@ -25,4 +25,4 @@ The first admin UI scope covers hotel setup, room types, explicit cancellation t
 
 Build the applications with `npm run build:api` and `npm run build:admin`.
 
-Never commit `.env` files or use production credentials locally. Before contributing, read [task board](./19-task-board.md), [business rules](./12-business-rules.md), and [AI agent rules](./21-ai-agent-rules.md).
+Never commit `.env` files or use production credentials locally. Before contributing, read [task board](../04-planning-and-tracking/19-task-board.md), [business rules](../01-product/12-business-rules.md), and [AI agent rules](../03-guidelines/21-ai-agent-rules.md).

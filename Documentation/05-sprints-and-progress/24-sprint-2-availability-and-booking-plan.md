@@ -1,5 +1,7 @@
 # Sprint 2 Technical Specification: Availability Holds & Booking Lifecycle Engine
 
+> **Status: not implemented.** No holds, bookings or guest-auth code exists yet. Before building, reconcile it with ADR-005 (guest checkout without an account) and ADR-007 (tax is still open) in [20-decision-log.md](../04-planning-and-tracking/20-decision-log.md). See [DOCUMENTATION-REPORT.md](../DOCUMENTATION-REPORT.md) §8.
+
 > **Document ID:** `DOC-024`  
 > **Status:** Approved Architecture Plan — Ready for Future Implementation  
 > **Target Release:** Sprint 2 (Phase 4 Milestone)  

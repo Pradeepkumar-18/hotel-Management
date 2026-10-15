@@ -11,7 +11,7 @@ interface InventoryCalendarViewProps {
   staff: StaffMe;
   busy: boolean;
   onInitialize: () => void;
-  onBlockDate: (day: InventoryDay) => void;
+  onAdjustDate: (day: InventoryDay) => void;
 }
 
 export function InventoryCalendarView({
@@ -23,7 +23,7 @@ export function InventoryCalendarView({
   staff,
   busy,
   onInitialize,
-  onBlockDate,
+  onAdjustDate,
 }: InventoryCalendarViewProps) {
   return (
     <div className="space-y-4">
@@ -98,16 +98,16 @@ export function InventoryCalendarView({
                     <span>{day.total} tot</span>
                     <span>{day.held} held</span>
                     <span>{day.confirmed} book</span>
-                    <span>{day.blocked} blk</span>
+                    <span className={day.blocked > 0 ? 'font-semibold text-orange-600' : ''}>{day.blocked} blk</span>
                   </div>
-                  {day.available > 0 && staff.permissions.includes('inventory.block') && (
+                  {staff.permissions.includes('inventory.block') && (day.available > 0 || day.blocked > 0) && (
                     <Button
                       variant="ghost"
                       size="sm"
                       className="w-full text-left justify-start p-0 h-auto text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 pt-1"
-                      onClick={() => onBlockDate(day)}
+                      onClick={() => onAdjustDate(day)}
                     >
-                      Block rooms
+                      {day.blocked > 0 ? 'Adjust / Unblock' : 'Block rooms'}
                     </Button>
                   )}
                 </div>

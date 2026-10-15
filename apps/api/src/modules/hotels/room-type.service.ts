@@ -151,6 +151,12 @@ function safeRoomView(value: any) {
 }
 
 function mapDuplicate(error: any): never {
-  if (error?.code === 11000) throw new ConflictException({ error: 'DUPLICATE_ROOM_TYPE_CODE', message: 'A room type with this code already exists for the hotel' });
+  if (error?.code === 11000) {
+    throw new ConflictException({
+      error: 'DUPLICATE',
+      message: 'code is already in use',
+      errors: [{ field: 'code', message: 'This code is already in use' }],
+    });
+  }
   throw error;
 }

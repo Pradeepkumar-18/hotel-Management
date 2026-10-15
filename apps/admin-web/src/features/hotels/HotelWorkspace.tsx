@@ -1,34 +1,41 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
-import { BedDouble, Check, Plus } from 'lucide-react';
-import { Hotel, request, RoomType, StaffMe } from '../../api';
+import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { AlertCircle, BedDouble, Check, Archive, Plus, PauseCircle } from 'lucide-react';
+import { Hotel, RoomType, PublishProblem, StaffMe } from '../../api';
 import { useBusyGuard, useToast } from '../../ui-feedback';
 import { Button, Field, Input, Modal, Select, Status } from '../../components/ui';
-import { isoToday, readId } from '../../utils/helpers';
+import { readId, isoToday } from '../../utils/helpers';
 import { RoomCreateModal } from '../rooms/RoomCreateModal';
+import { useServerErrors } from '../../hooks/useServerErrors';
+import { handleFormError } from '../../hooks/handleFormError';
+import { Can } from '../auth/Can';
+import { publishHotel, suspendHotel, archiveHotel, updateHotel } from './hotels.api';
+import { listRoomTypes } from '../rooms/rooms.api';
+import { BulkStatusConfirmModal } from '../../pages/hotels/components/BulkStatusConfirmModal';
 
-export function HotelWorkspace({
-  hotel: initial,
-  onClose,
-  onSaved,
-  staff,
-}: {
+interface HotelWorkspaceProps {
   hotel: Hotel;
   onClose: () => void;
   onSaved: (hotel: Hotel) => void;
-  staff: StaffMe;
-}) {
-  const [hotel, setHotel] = useState(initial);
+  staff?: StaffMe;
+}
+
+export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved }: HotelWorkspaceProps) {
+  const [hotel, setHotel] = useState(initialHotel);
   const [rooms, setRooms] = useState<RoomType[]>([]);
+  const [showRoom, setShowRoom] = useState(false);
+  const [publishProblems, setPublishProblems] = useState<PublishProblem[]>([]);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+
   const { busy, run } = useBusyGuard();
   const toast = useToast();
-  const [showRoom, setShowRoom] = useState(false);
+  const formErrors = useServerErrors();
 
   const loadRooms = useCallback(async () => {
     try {
-      setRooms(await request<RoomType[]>(`/admin/hotels/${readId(hotel)}/room-types`));
+      const data = await listRoomTypes(readId(hotel));
+      setRooms(data);
     } catch {
-      setRooms([]);
+      /* Handled silently */
     }
   }, [hotel]);
 
@@ -38,49 +45,104 @@ export function HotelWorkspace({
 
   const publish = () =>
     run(async () => {
+      setPublishProblems([]);
       try {
-        const h = await request<Hotel>(`/admin/hotels/${readId(hotel)}/publish`, {
-          method: 'POST',
-          body: JSON.stringify({ version: hotel.version }),
-        });
+        const h = await publishHotel(readId(hotel), hotel.version);
         setHotel(h);
         onSaved(h);
-        toast.success('Property published and visible in the catalog.');
+        toast.success(hotel.status === 'SUSPENDED' ? 'Property reactivated and visible in catalog.' : 'Property published and visible in the catalog.');
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Publication could not be completed');
+        handleFormError(e, formErrors, toast, {
+          onNotReady: (problems) => {
+            setPublishProblems(problems);
+            toast.error('Property is not ready to publish. Review the checklist below.');
+          },
+          onConflict: () => {
+            toast.error('Property was updated by another session. Please close and reopen.');
+          },
+        });
       }
     });
 
+  const suspend = () =>
+    run(async () => {
+      try {
+        const h = await suspendHotel(readId(hotel), hotel.version, 'Suspended via workspace');
+        setHotel(h);
+        onSaved(h);
+        toast.success('Property has been suspended from the catalog.');
+      } catch (err) {
+        handleFormError(err, formErrors, toast, {
+          onConflict: () => {
+            toast.error('Property was updated by another session. Please close and reopen.');
+          },
+        });
+      }
+    });
+
+  const doArchive = async (reason: string) => {
+    await run(async () => {
+      try {
+        const h = await archiveHotel(readId(hotel), hotel.version, reason);
+        setHotel(h);
+        onSaved(h);
+        toast.success('Property has been permanently archived.');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not archive property');
+      }
+    });
+  };
+
   const savePolicy = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    formErrors.clearErrors();
     const f = new FormData(e.currentTarget);
     const fee = (prefix: string) => {
-      const basis = String(f.get(`${prefix}Basis`));
+      const basis = String(
+        f.get(`cancellationPolicy.${prefix}.basis`) ?? f.get(`${prefix}Basis`) ?? 'NO_FEE'
+      );
       return basis === 'FIXED_MINOR_UNITS'
-        ? { basis, amountMinorUnits: Number(f.get(`${prefix}Amount`)), currency: String(f.get(`${prefix}Currency`)).toUpperCase() }
+        ? {
+            basis,
+            amountMinorUnits: Number(
+              f.get(`cancellationPolicy.${prefix}.amountMinorUnits`) ?? f.get(`${prefix}Amount`) ?? 0
+            ),
+            currency: String(
+              f.get(`cancellationPolicy.${prefix}.currency`) ?? f.get(`${prefix}Currency`) ?? ''
+            ).toUpperCase(),
+          }
         : basis === 'PERCENTAGE_BPS'
-        ? { basis, percentageBps: Math.round(Number(f.get(`${prefix}Percent`)) * 100) }
+        ? {
+            basis,
+            percentageBps: Math.round(
+              Number(
+                f.get(`cancellationPolicy.${prefix}.percentageBps`) ?? f.get(`${prefix}Percent`) ?? 0
+              ) * 100
+            ),
+          }
         : { basis };
     };
+
     void run(async () => {
       try {
-        const h = await request<Hotel>(`/admin/hotels/${readId(hotel)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            version: hotel.version,
-            cancellationPolicy: {
-              effectiveFrom: String(f.get('effectiveFrom')),
-              freeCancellationHoursBeforeCheckIn: Number(f.get('cutoff')),
-              afterCutoff: fee('after'),
-              noShow: fee('noShow'),
-            },
-          }),
+        const h = await updateHotel(readId(hotel), {
+          version: hotel.version,
+          cancellationPolicy: {
+            effectiveFrom: String(
+              f.get('cancellationPolicy.effectiveFrom') ?? f.get('effectiveFrom') ?? ''
+            ),
+            freeCancellationHoursBeforeCheckIn: Number(
+              f.get('cancellationPolicy.freeCancellationHoursBeforeCheckIn') ?? f.get('cutoff') ?? 24
+            ),
+            afterCutoff: fee('afterCutoff'),
+            noShow: fee('noShow'),
+          },
         });
         setHotel(h);
         onSaved(h);
         toast.success('Cancellation and no-show terms saved.');
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Could not save policy');
+        handleFormError(err, formErrors, toast);
       }
     });
   };
@@ -92,55 +154,100 @@ export function HotelWorkspace({
           <Status status={hotel.status} variant="pill" />
           <span className="workspace-slug text-xs font-mono text-slate-400">/{hotel.slug}</span>
         </div>
-        {staff.permissions.includes('hotels.publish') && hotel.status !== 'PUBLISHED' && (
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<Check size={15} />}
-            isLoading={busy}
-            loadingLabel="Publishing property…"
-            onClick={publish}
-          >
-            Publish property
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {hotel.status !== 'ARCHIVED' && (
+            <Can permission="hotels.archive">
+              <Button
+                variant="ghost"
+                size="sm"
+                leftIcon={<Archive size={14} className="text-rose-600" />}
+                onClick={() => setShowArchiveModal(true)}
+                disabled={busy}
+                className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+              >
+                Archive
+              </Button>
+            </Can>
+          )}
+
+          {hotel.status === 'PUBLISHED' && (
+            <Can permission="hotels.edit">
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<PauseCircle size={14} className="text-amber-600" />}
+                isLoading={busy}
+                loadingLabel="Suspending property…"
+                onClick={suspend}
+                className="text-amber-700 hover:bg-amber-50"
+              >
+                Suspend
+              </Button>
+            </Can>
+          )}
+
+          {hotel.status === 'SUSPENDED' && (
+            <Can permission="hotels.publish">
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Check size={15} />}
+                isLoading={busy}
+                loadingLabel="Reactivating property…"
+                onClick={publish}
+              >
+                Reactivate
+              </Button>
+            </Can>
+          )}
+
+          {hotel.status === 'DRAFT' && (
+            <Can permission="hotels.publish">
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Check size={15} />}
+                isLoading={busy}
+                loadingLabel="Publishing property…"
+                onClick={publish}
+              >
+                Publish property
+              </Button>
+            </Can>
+          )}
+        </div>
       </div>
 
-      <div className="setup-progress flex items-center p-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-6 text-xs">
-        <div className={`flex items-center gap-2 font-medium ${rooms.length ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
-          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${rooms.length ? 'bg-emerald-100 text-emerald-800' : 'border border-slate-300'}`}>
-            {rooms.length ? <Check size={12} /> : '1'}
-          </span>
-          <b>Room types</b>
+      {publishProblems.length > 0 && (
+        <div className="p-4 mb-5 bg-rose-50 border border-rose-200 rounded-xl space-y-2 text-xs">
+          <div className="flex items-center gap-2 font-bold text-rose-800">
+            <AlertCircle size={16} />
+            <span>Pre-publish requirements missing ({publishProblems.length})</span>
+          </div>
+          <ul className="list-disc pl-5 space-y-1 text-rose-700">
+            {publishProblems.map((prob, i) => (
+              <li key={i}>{prob.message}</li>
+            ))}
+          </ul>
         </div>
-        <div className="flex-1 h-px bg-slate-200 mx-3" />
-        <div className="flex items-center gap-2 text-emerald-800 font-bold">
-          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px]">2</span>
-          <b>Rates & availability</b>
-        </div>
-        <div className="flex-1 h-px bg-slate-200 mx-3" />
-        <div className="flex items-center gap-2 text-slate-400 font-medium">
-          <span className="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center text-[10px]">3</span>
-          <b>Publish</b>
-        </div>
-      </div>
+      )}
 
       <div className="workspace-section space-y-3 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Room types</h3>
-            <p className="text-xs text-slate-500">{rooms.length ? `${rooms.length} room type${rooms.length === 1 ? '' : 's'} configured` : 'Create a room type to start selling stays.'}</p>
+            <h3 className="text-sm font-bold text-slate-900">Room categories</h3>
+            <p className="text-xs text-slate-500">Physical and bookable room inventory layouts.</p>
           </div>
-          {staff.permissions.includes('room_types.create') && (
+          <Can permission="room_types.create">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               leftIcon={<Plus size={14} />}
               onClick={() => setShowRoom(true)}
             >
-              Add room
+              Add room type
             </Button>
-          )}
+          </Can>
         </div>
 
         {rooms.length === 0 ? (
@@ -174,33 +281,35 @@ export function HotelWorkspace({
         </div>
 
         <form onSubmit={savePolicy} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Effective date" required>
+          <Field label="Effective date" required error={formErrors.getError('cancellationPolicy.effectiveFrom')}>
             <Input
               type="date"
-              name="effectiveFrom"
+              name="cancellationPolicy.effectiveFrom"
               required
               defaultValue={hotel.cancellationPolicy?.effectiveFrom || isoToday(hotel.timezone)}
+              isError={Boolean(formErrors.getError('cancellationPolicy.effectiveFrom'))}
             />
           </Field>
 
-          <Field label="Free cancellation cutoff" required>
+          <Field label="Free cancellation cutoff" required error={formErrors.getError('cancellationPolicy.freeCancellationHoursBeforeCheckIn')}>
             <Input
               type="number"
-              name="cutoff"
+              name="cancellationPolicy.freeCancellationHoursBeforeCheckIn"
               required
               min="0"
               max="8760"
               defaultValue={hotel.cancellationPolicy?.freeCancellationHoursBeforeCheckIn ?? 24}
               rightIcon={<span className="text-[11px] font-medium text-slate-500">hours before check-in</span>}
+              isError={Boolean(formErrors.getError('cancellationPolicy.freeCancellationHoursBeforeCheckIn'))}
             />
           </Field>
 
-          <FeeField label="After cutoff" prefix="after" initial={hotel.cancellationPolicy?.afterCutoff} />
+          <FeeField label="After cutoff" prefix="afterCutoff" initial={hotel.cancellationPolicy?.afterCutoff} />
           <FeeField label="No-show" prefix="noShow" initial={hotel.cancellationPolicy?.noShow} />
 
           <div className="col-span-full space-y-2 pt-2">
             <small className="text-[11px] text-slate-400 block">Any fixed fee must use the same currency as the property's room rates.</small>
-            {staff.permissions.includes('hotels.edit') && (
+            <Can permission="hotels.edit">
               <Button
                 type="submit"
                 variant="outline"
@@ -210,7 +319,7 @@ export function HotelWorkspace({
               >
                 Save cancellation terms
               </Button>
-            )}
+            </Can>
           </div>
         </form>
       </div>
@@ -225,6 +334,20 @@ export function HotelWorkspace({
           }}
         />
       )}
+
+      {showArchiveModal && (
+        <BulkStatusConfirmModal
+          isOpen={showArchiveModal}
+          onClose={() => setShowArchiveModal(false)}
+          status="ARCHIVED"
+          count={1}
+          loading={busy}
+          onConfirm={async (reason) => {
+            await doArchive(reason);
+            setShowArchiveModal(false);
+          }}
+        />
+      )}
     </Modal>
   );
 }
@@ -236,7 +359,7 @@ function FeeField({ label, prefix, initial }: { label: string; prefix: string; i
     <div className="field flex flex-col gap-1.5">
       <label className="text-xs font-semibold text-slate-700">{label}</label>
       <Select
-        name={`${prefix}Basis`}
+        name={`cancellationPolicy.${prefix}.basis`}
         value={basis}
         onChange={(e) => setBasis(e.target.value)}
       >
@@ -253,14 +376,14 @@ function FeeField({ label, prefix, initial }: { label: string; prefix: string; i
             type="number"
             min="0"
             step="1"
-            name={`${prefix}Amount`}
+            name={`cancellationPolicy.${prefix}.amountMinorUnits`}
             required
             defaultValue={initial?.amountMinorUnits}
             placeholder="Amount (minor units)"
           />
           <Input
             aria-label={`${label} currency code`}
-            name={`${prefix}Currency`}
+            name={`cancellationPolicy.${prefix}.currency`}
             required
             minLength={3}
             maxLength={3}
@@ -278,7 +401,7 @@ function FeeField({ label, prefix, initial }: { label: string; prefix: string; i
             min="0"
             max="100"
             step="0.01"
-            name={`${prefix}Percent`}
+            name={`cancellationPolicy.${prefix}.percentageBps`}
             required
             defaultValue={initial?.percentageBps !== undefined ? initial.percentageBps / 100 : ''}
             rightIcon={<span className="text-[11px] font-medium text-slate-500">% of stay</span>}

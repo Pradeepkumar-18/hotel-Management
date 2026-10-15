@@ -362,12 +362,12 @@ The [`Documentation/`](./Documentation/) folder houses the comprehensive archite
 - **[Execution Order](./Documentation/EXECUTION-ORDER.md)** — Recommended reading order and phased delivery milestones.
 - **[Engineering Rules (`AGENT.md`)](./AGENT.md)** — Mandatory standards for human engineers and AI agents.
 - **[System Context (`context.md`)](./context.md)** — Core domain problem statement and architecture map.
-- **[Product Requirements](./Documentation/01-product-requirements.md)** — Functional specifications for guests and administrators.
-- **[Architecture Blueprint](./Documentation/04-architecture.md)** — Service topology, boundaries, and booking sequences.
-- **[Database Design](./Documentation/07-database-design.md)** — Data model, indexing strategies, and inventory schema.
-- **[API Specification](./Documentation/08-api-specification.md)** — Error codes, headers, and request envelopes.
-- **[Business Rules](./Documentation/12-business-rules.md)** — Formal availability equations, rate calculations, and stay rules.
-- **[Security Guidelines](./Documentation/14-security-guidelines.md)** — Threat models, data minimization, and session policies.
+- **[Product Requirements](./Documentation/01-product/01-product-requirements.md)** — Functional specifications for guests and administrators.
+- **[Architecture Blueprint](./Documentation/02-architecture/04-architecture.md)** — Service topology, boundaries, and booking sequences.
+- **[Database Design](./Documentation/02-architecture/07-database-design.md)** — Data model, indexing strategies, and inventory schema.
+- **[API Specification](./Documentation/02-architecture/08-api-specification.md)** — Error codes, headers, and request envelopes.
+- **[Business Rules](./Documentation/01-product/12-business-rules.md)** — Formal availability equations, rate calculations, and stay rules.
+- **[Security Guidelines](./Documentation/03-guidelines/14-security-guidelines.md)** — Threat models, data minimization, and session policies.
 - **[Module Specifications](./Documentation/modules/README.md)** — Deep designs for Inventory, Auth, Pricing, Bookings, and UI Kit.
 
 ---

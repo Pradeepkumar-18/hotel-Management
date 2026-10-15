@@ -23,6 +23,13 @@ export class AdminHotelsController {
     return this.hotels.list(query, request.user);
   }
 
+  @Get('metrics')
+  @RequirePermission('hotels.view')
+  @ApiOperation({ summary: 'Get aggregated hotel count metrics by status' })
+  metrics(@Req() request: StaffRequest) {
+    return this.hotels.getMetrics(request.user);
+  }
+
   @Post()
   @RequirePermission('hotels.create')
   @ApiOperation({ summary: 'Create a draft hotel' })

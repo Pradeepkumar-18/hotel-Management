@@ -15,6 +15,7 @@ export interface AppConfig {
     staffSessionIdle: number;
     guestSessionMaxAge: number;
     guestSessionIdle: number;
+    mfaRequired: boolean;
   };
   platform: {
     defaultCurrency: string;
@@ -27,7 +28,7 @@ export default (): AppConfig => ({
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   apiPrefix: process.env.API_PREFIX || '/api/v1',
-  corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:3001,http://localhost:3002').split(',').map((origin) => origin.trim()).filter(Boolean),
+  corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:3001,http://localhost:3002').split(',').map((origin) => origin.trim()).filter(Boolean),
   database: {
     uri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/staywise_dev',
   },
@@ -40,6 +41,7 @@ export default (): AppConfig => ({
     staffSessionIdle: parseInt(process.env.STAFF_SESSION_IDLE_SECONDS || '1800', 10),
     guestSessionMaxAge: parseInt(process.env.GUEST_SESSION_MAX_AGE_SECONDS || '7776000', 10),
     guestSessionIdle: parseInt(process.env.GUEST_SESSION_IDLE_SECONDS || '2592000', 10),
+    mfaRequired: process.env.MFA_ENABLED === 'true',
   },
   platform: {
     defaultCurrency: process.env.DEFAULT_CURRENCY || 'INR',

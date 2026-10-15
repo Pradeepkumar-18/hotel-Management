@@ -4,7 +4,9 @@ import { homePath } from './route-config';
 import { PermissionRoute } from './PermissionRoute';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { HotelsPage } from '../pages/hotels/HotelsPage';
-import { CatalogPage } from '../pages/catalog/CatalogPage';
+import { RoomTypesPage } from '../pages/catalog/RoomTypesPage';
+import { InventoryPage } from '../pages/catalog/InventoryPage';
+import { RatesPage } from '../pages/catalog/RatesPage';
 import { AccessPage } from '../pages/error/AccessPage';
 
 export function AppRoutes({ staff }: { staff: StaffMe }) {
@@ -34,7 +36,7 @@ export function AppRoutes({ staff }: { staff: StaffMe }) {
         path="/admin/room-types"
         element={
           <PermissionRoute staff={staff} path="/admin/room-types">
-            <CatalogPage mode="rooms" staff={staff} />
+            <RoomTypesPage staff={staff} />
           </PermissionRoute>
         }
       />
@@ -42,7 +44,7 @@ export function AppRoutes({ staff }: { staff: StaffMe }) {
         path="/admin/inventory"
         element={
           <PermissionRoute staff={staff} path="/admin/inventory">
-            <CatalogPage mode="inventory" staff={staff} />
+            <InventoryPage staff={staff} />
           </PermissionRoute>
         }
       />
@@ -50,7 +52,7 @@ export function AppRoutes({ staff }: { staff: StaffMe }) {
         path="/admin/rates"
         element={
           <PermissionRoute staff={staff} path="/admin/rates">
-            <CatalogPage mode="rates" staff={staff} />
+            <RatesPage staff={staff} />
           </PermissionRoute>
         }
       />

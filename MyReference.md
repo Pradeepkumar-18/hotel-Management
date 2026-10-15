@@ -1,0 +1,1 @@
+For now , the Flow has , create rooms => add the room type with all the details 

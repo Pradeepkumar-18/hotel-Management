@@ -14,33 +14,33 @@ export interface StatusProps {
 
 const pillConfig: Record<string, { bg: string; text: string; border: string; icon: React.ReactNode }> = {
   PUBLISHED: {
-    bg: 'bg-[#dcfce7]',
-    text: 'text-[#15803d]',
-    border: 'border-[#86efac]',
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-700',
+    border: 'border-emerald-300',
     icon: <CheckCircle2 size={13} />,
   },
   SUSPENDED: {
-    bg: 'bg-[#fee2e2]',
-    text: 'text-[#b91c1c]',
-    border: 'border-[#fca5a5]',
+    bg: 'bg-rose-100',
+    text: 'text-rose-700',
+    border: 'border-rose-300',
     icon: <PauseCircle size={13} />,
   },
   ARCHIVED: {
-    bg: 'bg-[#f1f5f9]',
-    text: 'text-[#475569]',
-    border: 'border-[#cbd5e1]',
+    bg: 'bg-slate-100',
+    text: 'text-slate-600',
+    border: 'border-slate-300',
     icon: <Archive size={13} />,
   },
   NEEDS_SETUP: {
-    bg: 'bg-[#fef3c7]',
-    text: 'text-[#b45309]',
-    border: 'border-[#fde68a]',
+    bg: 'bg-amber-100',
+    text: 'text-amber-700',
+    border: 'border-amber-300',
     icon: <AlertCircle size={13} />,
   },
   DRAFT: {
-    bg: 'bg-[#ffedd5]',
-    text: 'text-[#c2410c]',
-    border: 'border-[#fed7aa]',
+    bg: 'bg-orange-100',
+    text: 'text-orange-700',
+    border: 'border-orange-300',
     icon: <Clock size={13} />,
   },
 };

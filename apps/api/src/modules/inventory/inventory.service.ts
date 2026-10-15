@@ -6,7 +6,7 @@ import { TransactionService } from '../../common/database/transaction.service';
 import { AuditService } from '../audit/audit.service';
 import { RoomType, RoomTypeDocument, RoomTypeStatus } from '../hotels/schemas/room-type.schema';
 import { NightInventory, NightInventoryDocument } from './schemas/night-inventory.schema';
-import { InventoryAdjustmentDto, InventoryRangeDto } from './dto/inventory.dto';
+import { BatchInventoryAdjustmentDto, InventoryAdjustmentDto, InventoryRangeDto } from './dto/inventory.dto';
 
 const MAX_RANGE_DAYS = 366;
 
@@ -212,6 +212,66 @@ export class InventoryService {
         session,
       });
       return { ...after.toObject(), available: after.total - after.blocked - after.held - after.confirmed };
+    });
+  }
+
+  async batchAdjust(roomTypeId: string, dto: BatchInventoryAdjustmentDto, actor: StaffPrincipal) {
+    if (dto.from >= dto.to) {
+      throw new UnprocessableEntityException('Start date must be before end date');
+    }
+    const dates = dateRange(dto.from, dto.to);
+    return this.transactions.executeInTransaction(async (session) => {
+      const roomType = await this.getRoomType(roomTypeId, session);
+      assertHotelScope(actor, roomType.hotelId.toString());
+
+      const records = await this.inventoryModel
+        .find({ roomTypeId: roomType._id, stayDate: { $in: dates } })
+        .session(session);
+
+      if (records.length !== dates.length) {
+        throw new NotFoundException({
+          error: 'INVENTORY_RANGE_NOT_INITIALIZED',
+          message: 'One or more dates in the range are not initialized yet',
+        });
+      }
+
+      for (const inv of records) {
+        const available = inv.total - inv.blocked - inv.held - inv.confirmed;
+        if (dto.action === 'BLOCK' && available < dto.quantity) {
+          throw new ConflictException({
+            error: 'INVENTORY_UNAVAILABLE',
+            message: `Not enough rooms available on ${inv.stayDate} to block ${dto.quantity} rooms`,
+          });
+        }
+        if (dto.action === 'UNBLOCK' && inv.blocked < dto.quantity) {
+          throw new ConflictException({
+            error: 'BLOCKED_QUANTITY_INSUFFICIENT',
+            message: `Cannot unblock ${dto.quantity} rooms on ${inv.stayDate}; only ${inv.blocked} blocked`,
+          });
+        }
+      }
+
+      const incBlocked = dto.action === 'BLOCK' ? dto.quantity : -dto.quantity;
+      await this.inventoryModel.updateMany(
+        { roomTypeId: roomType._id, stayDate: { $in: dates } },
+        { $inc: { blocked: incBlocked, version: 1 } },
+        { session },
+      );
+
+      await this.audit.log({
+        actorId: actor.id,
+        actorType: 'STAFF',
+        action: dto.action === 'BLOCK' ? 'inventory.batch_block' : 'inventory.batch_unblock',
+        resourceType: 'ROOM_TYPE',
+        resourceId: roomType._id.toString(),
+        hotelId: roomType.hotelId.toString(),
+        outcome: 'SUCCESS',
+        reason: dto.reason.trim(),
+        metadata: { from: dto.from, to: dto.to, quantity: dto.quantity, nightCount: dates.length },
+        session,
+      });
+
+      return { success: true, updatedNights: dates.length };
     });
   }
 

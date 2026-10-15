@@ -11,6 +11,7 @@ import { HotelService } from './hotel.service';
 import { RoomTypeService } from './room-type.service';
 import { AdminHotelsController, PublicHotelsController } from './hotels.controller';
 import { AdminRoomTypesController } from './room-types.controller';
+import { HotelPublishChecks } from './hotel-publish.checks';
 
 @Module({
   imports: [AuthModule, InventoryModule, PricingModule, MongooseModule.forFeature([
@@ -20,7 +21,7 @@ import { AdminRoomTypesController } from './room-types.controller';
     { name: NightInventory.name, schema: NightInventorySchema },
   ])],
   controllers: [AdminHotelsController, PublicHotelsController, AdminRoomTypesController],
-  providers: [HotelService, RoomTypeService],
-  exports: [HotelService, RoomTypeService],
+  providers: [HotelService, RoomTypeService, HotelPublishChecks],
+  exports: [HotelService, RoomTypeService, HotelPublishChecks],
 })
 export class HotelsModule {}

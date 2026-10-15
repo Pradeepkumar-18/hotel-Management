@@ -10,7 +10,7 @@ import { TransactionService } from './transaction.service';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('database.uri'),
-        autoIndex: true,
+        autoIndex: configService.get<string>('nodeEnv') !== 'production',
       }),
       inject: [ConfigService],
     }),

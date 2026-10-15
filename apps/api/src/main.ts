@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { flattenValidationErrors } from './common/validation/flatten-validation-errors';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -19,8 +20,20 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
+  const nodeEnv = configService.get<string>('nodeEnv', 'development');
+  const effectiveOrigins =
+    corsOrigins.length > 0
+      ? corsOrigins
+      : nodeEnv === 'production'
+        ? []
+        : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+  if (nodeEnv === 'production' && effectiveOrigins.length === 0) {
+    throw new Error('FATAL: CORS_ORIGINS must be explicitly configured in production environments.');
+  }
+
   app.enableCors({
-    origin: corsOrigins.length > 0 ? corsOrigins : true,
+    origin: effectiveOrigins,
     credentials: true,
   });
 
@@ -34,6 +47,12 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
+      exceptionFactory: (errors) =>
+        new BadRequestException({
+          error: 'VALIDATION_FAILED',
+          message: 'Some fields are invalid',
+          errors: flattenValidationErrors(errors),
+        }),
     }),
   );
 

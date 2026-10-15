@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BedDouble, Building2, CalendarDays, Check, Compass, DollarSign, RefreshCw, ShieldCheck, ExternalLink } from 'lucide-react';
-import { Hotel, request, StaffMe } from '../../api';
+import { Hotel, StaffMe, fetchHotelMetrics } from '../../api';
+import { fetchRecentHotels } from '../../features/hotels/hotels.api';
 import { AsyncButton } from '../../ui-feedback';
 import { Alert, EmptyState, LoadingRows, MetricCard, Status, Button } from '../../components/ui';
 import { readId } from '../../utils/helpers';
-
-type HotelList = { items: Hotel[]; total: number };
 
 export function DashboardPage({ staff }: { staff: StaffMe }) {
   const navigate = useNavigate();
@@ -25,20 +24,17 @@ export function DashboardPage({ staff }: { staff: StaffMe }) {
     setLoading(true);
     setError('');
     try {
-      const [all, published, draft, suspended, archived] = await Promise.all([
-        request<HotelList>('/admin/hotels?limit=8&offset=0'),
-        request<HotelList>('/admin/hotels?status=PUBLISHED&limit=1&offset=0'),
-        request<HotelList>('/admin/hotels?status=DRAFT&limit=1&offset=0'),
-        request<HotelList>('/admin/hotels?status=SUSPENDED&limit=1&offset=0'),
-        request<HotelList>('/admin/hotels?status=ARCHIVED&limit=1&offset=0'),
+      const [all, metrics] = await Promise.all([
+        fetchRecentHotels(8),
+        fetchHotelMetrics(),
       ]);
       setOverview({
         hotels: all.items,
-        total: all.total,
-        published: published.total,
-        draft: draft.total,
-        suspended: suspended.total,
-        archived: archived.total,
+        total: metrics.total,
+        published: metrics.published,
+        draft: metrics.draft,
+        suspended: metrics.suspended,
+        archived: metrics.archived,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load operations overview');
@@ -63,14 +59,17 @@ export function DashboardPage({ staff }: { staff: StaffMe }) {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs font-medium text-slate-500">{dateLabel}</span>
-          <AsyncButton
-            className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-300/90 rounded-lg text-xs shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={load}
-            busy={loading}
-            loadingLabel="Refreshing overview…"
+            isLoading={loading}
+            loadingLabel="Refreshing…"
+            leftIcon={<RefreshCw size={14} className={`shrink-0 ${loading ? 'animate-spin' : ''}`} />}
+            className="h-8 shadow-2xs"
           >
-            <RefreshCw size={14} className="text-slate-500" /> Refresh
-          </AsyncButton>
+            Refresh
+          </Button>
         </div>
       </div>
 

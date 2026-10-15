@@ -8,9 +8,9 @@ function readCsrfCookie() {
   return cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : '';
 }
 
-export class ApiError extends Error {
-  constructor(message: string, readonly status: number, readonly payload?: any) { super(message); }
-}
+import { ApiError, toApiError, isApiError, PublishProblem } from './api/errors';
+export { ApiError, toApiError, isApiError };
+export type { PublishProblem };
 
 export const API_ACCESS_EVENT = 'staywise:api-access';
 
@@ -23,14 +23,20 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     credentials: 'include',
     headers,
   });
-  const payload = response.status === 204 ? undefined : await response.json().catch(() => undefined);
-  if (!response.ok) {
-    if ((response.status === 401 || response.status === 403) && path !== '/auth/staff/login' && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent(API_ACCESS_EVENT, { detail: { status: response.status } }));
-    }
-    throw new ApiError(payload?.message || payload?.error || `Request failed (${response.status})`, response.status, payload);
+  if (response.status === 204) {
+    return undefined as T;
   }
-  return payload as T;
+  if (!response.ok) {
+    const err = await toApiError(response);
+    const sessionProblem =
+      (err.status === 401 && path !== '/auth/staff/login') ||
+      (err.status === 403 && err.code === 'CSRF_REJECTED');
+    if (sessionProblem && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(API_ACCESS_EVENT, { detail: { status: 401, code: err.code } }));
+    }
+    throw err;
+  }
+  return response.json() as Promise<T>;
 }
 
 export type StaffMe = { user: { id: string; email: string }; roles: string[]; permissions: string[]; hotelIds: string[] };
@@ -70,10 +76,30 @@ export async function updateHotelMedia(id: string, version: number, media: Hotel
   });
 }
 
-export async function bulkUpdateHotelStatus(hotelIds: string[], status: string, reason?: string): Promise<{ modifiedCount: number; status: string }> {
-  return request<{ modifiedCount: number; status: string }>('/admin/hotels/bulk-status', {
-    method: 'PATCH',
-    body: JSON.stringify({ hotelIds, status, reason }),
-  });
+export async function bulkUpdateHotelStatus(
+  hotelIds: string[],
+  status: string,
+  reason?: string
+): Promise<{ modifiedCount: number; status: string; updated?: string[]; skipped?: { hotelId: string; code?: string; message: string }[] }> {
+  return request<{ modifiedCount: number; status: string; updated?: string[]; skipped?: { hotelId: string; code?: string; message: string }[] }>(
+    '/admin/hotels/bulk-status',
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ hotelIds, status, reason }),
+    }
+  );
 }
+
+export type HotelMetrics = {
+  total: number;
+  published: number;
+  draft: number;
+  suspended: number;
+  archived: number;
+};
+
+export async function fetchHotelMetrics(): Promise<HotelMetrics> {
+  return request<HotelMetrics>('/admin/hotels/metrics');
+}
+
 

@@ -48,9 +48,11 @@ export class StaffPermissionGuard implements CanActivate {
       throw new ForbiddenException({ error: 'FORBIDDEN', message: 'Required permission is missing' });
     }
 
-    const hotelId = request.params.hotelId;
-    if (hotelId && (Array.isArray(hotelId) || (actor.role !== 'SUPER_ADMIN' && !actor.hotelIds?.includes(hotelId)))) {
-      throw new ForbiddenException({ error: 'FORBIDDEN', message: 'Hotel is outside the staff member scope' });
+    const rawHotelId = request.params.hotelId || (request.url.includes('/hotels') ? request.params.id : undefined);
+    if (rawHotelId) {
+      if (typeof rawHotelId !== 'string' || (actor.role !== 'SUPER_ADMIN' && !actor.hotelIds?.includes(rawHotelId))) {
+        throw new ForbiddenException({ error: 'FORBIDDEN', message: 'Hotel is outside the staff member scope' });
+      }
     }
     return true;
   }

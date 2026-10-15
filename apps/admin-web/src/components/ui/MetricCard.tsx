@@ -11,13 +11,13 @@ export interface MetricCardProps {
 }
 
 const toneMap: Record<string, { bg: string; text: string; iconBg: string }> = {
-  green: { bg: 'bg-[#edf6f2] border-[#c9dfd4]', text: 'text-[#164d42]', iconBg: 'bg-[#d0e5dc] text-[#1e6354]' },
-  teal: { bg: 'bg-[#edf7f5] border-[#c6e5e0]', text: 'text-[#164d47]', iconBg: 'bg-[#ccebe6] text-[#1e635c]' },
-  sand: { bg: 'bg-[#fcf7ee] border-[#eee1c9]', text: 'text-[#5c441b]', iconBg: 'bg-[#f5e7ce] text-[#856123]' },
-  slate: { bg: 'bg-[#f4f6f4] border-[#e1e6e2]', text: 'text-[#2b3c34]', iconBg: 'bg-[#e2e8e4] text-[#55695f]' },
-  amber: { bg: 'bg-[#fcf7ee] border-[#eee1c9]', text: 'text-[#5c441b]', iconBg: 'bg-[#f5e7ce] text-[#856123]' },
-  red: { bg: 'bg-[#fbefed] border-[#f2cfcb]', text: 'text-[#823933]', iconBg: 'bg-[#f5d9d5] text-[#a54d47]' },
-  blue: { bg: 'bg-[#f0f6fa] border-[#cae0ee]', text: 'text-[#1f4a66]', iconBg: 'bg-[#d6e7f2] text-[#2c6c94]' },
+  green: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-brand-hover', iconBg: 'bg-emerald-100 text-brand-primary' },
+  teal: { bg: 'bg-teal-50 border-teal-200', text: 'text-teal-900', iconBg: 'bg-teal-100 text-teal-700' },
+  sand: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-900', iconBg: 'bg-amber-100 text-amber-800' },
+  slate: { bg: 'bg-slate-50 border-slate-200', text: 'text-slate-800', iconBg: 'bg-slate-100 text-slate-600' },
+  amber: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-900', iconBg: 'bg-amber-100 text-amber-800' },
+  red: { bg: 'bg-rose-50 border-rose-200', text: 'text-rose-900', iconBg: 'bg-rose-100 text-rose-700' },
+  blue: { bg: 'bg-sky-50 border-sky-200', text: 'text-sky-900', iconBg: 'bg-sky-100 text-sky-700' },
 };
 
 export function MetricCard({
@@ -39,13 +39,13 @@ export function MetricCard({
         <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold shrink-0 shadow-2xs ${styles.iconBg}`}>
           {icon}
         </span>
-        <span className="text-sm font-bold text-[#45584e] truncate tracking-tight">{label}</span>
+        <span className="text-sm font-bold text-ink-deep truncate tracking-tight">{label}</span>
       </div>
       <div>
         <strong className={`text-3xl font-extrabold tracking-tight block ${styles.text}`} aria-live="polite">
           {loading ? '—' : value ?? 0}
         </strong>
-        <p className="text-xs font-medium leading-normal text-[#6b7c73] mt-1 block overflow-hidden text-ellipsis whitespace-nowrap">{detail}</p>
+        <p className="text-xs font-medium leading-normal text-ink-muted mt-1 block overflow-hidden text-ellipsis whitespace-nowrap">{detail}</p>
       </div>
     </article>
   );

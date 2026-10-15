@@ -49,10 +49,10 @@ export function DataTable<T>({
   className = '',
 }: DataTableProps<T>) {
   return (
-    <div className={cn('data-table-container bg-white border border-[#e4e9e3] rounded-xl shadow-2xs overflow-hidden', className)}>
+    <div className={cn('data-table-container bg-white border border-line rounded-xl shadow-2xs overflow-hidden', className)}>
       {/* Top Toolbar / Filter Area Header */}
       {toolbarHeader && (
-        <div className="p-4 border-b border-[#e4e9e3] bg-[#fbfcfb] flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="p-4 border-b border-line bg-surface-subtle flex flex-col md:flex-row md:items-center justify-between gap-3">
           {toolbarHeader}
         </div>
       )}
@@ -70,7 +70,7 @@ export function DataTable<T>({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-[#f6f8f5] border-b border-[#e4e9e3] text-[#73827b] uppercase font-bold tracking-wider text-[11px]">
+                <tr className="bg-surface-muted border-b border-line text-ink-muted uppercase font-bold tracking-wider text-[11px]">
                   {columns.map((col) => (
                     <th
                       key={col.key}
@@ -85,7 +85,7 @@ export function DataTable<T>({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#edf0ec]">
+              <tbody className="divide-y divide-line-subtle">
                 {data.map((row) => {
                   const key = rowKey(row);
                   const isSelected = selectedRowKeys?.has(key);
@@ -96,15 +96,15 @@ export function DataTable<T>({
                       onClick={() => onRowClick?.(row)}
                       className={cn(
                         'transition-colors duration-150',
-                        onRowClick ? 'cursor-pointer hover:bg-[#f6f8f5]/80' : '',
-                        isSelected ? 'bg-[#e9f3ee]/60' : 'bg-white'
+                        onRowClick ? 'cursor-pointer hover:bg-surface-muted' : '',
+                        isSelected ? 'bg-brand-pale/60' : 'bg-white'
                       )}
                     >
                       {columns.map((col) => (
                         <td
                           key={col.key}
                           className={cn(
-                            'px-4 py-3.5 text-[#20322d]',
+                            'px-4 py-3.5 text-ink',
                             col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left',
                             col.cellClassName
                           )}

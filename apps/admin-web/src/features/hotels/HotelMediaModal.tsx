@@ -3,6 +3,8 @@ import { Image, Plus, Star, Trash2 } from 'lucide-react';
 import { Hotel, HotelMediaItem, updateHotelMedia } from '../../api';
 import { Modal, Field, Input, Button, Alert } from '../../components/ui';
 import { useToast } from '../../ui-feedback';
+import { useServerErrors } from '../../hooks/useServerErrors';
+import { handleFormError } from '../../hooks/handleFormError';
 
 export interface HotelMediaModalProps {
   hotel: Hotel;
@@ -12,6 +14,7 @@ export interface HotelMediaModalProps {
 
 export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProps) {
   const toast = useToast();
+  const formErrors = useServerErrors();
   const [mediaList, setMediaList] = useState<HotelMediaItem[]>(() => {
     if (hotel.media && hotel.media.length > 0) {
       return hotel.media;
@@ -84,15 +87,18 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
 
   const handleSave = async () => {
     setError('');
+    formErrors.clear();
     setSaving(true);
     try {
       const updated = await updateHotelMedia(hotel._id, hotel.version, mediaList);
       toast.success('Hotel photo gallery saved successfully.');
       onSaved(updated);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to update hotel media.';
-      setError(msg);
-      toast.error(msg);
+      handleFormError(err, formErrors, toast, {
+        onConflict: () => {
+          toast.error('Hotel media was updated in another session. Please reopen.');
+        },
+      });
     } finally {
       setSaving(false);
     }
@@ -165,7 +171,7 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
                 <div
                   key={idx}
                   className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 ${
-                    item.isPrimary ? 'bg-emerald-50/50 border-[#1e6354]' : 'bg-white border-slate-200'
+                    item.isPrimary ? 'bg-emerald-50/50 border-brand-primary' : 'bg-white border-slate-200'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -176,8 +182,8 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
                       <b className="text-xs font-bold text-slate-900 truncate">{item.caption || `Photo ${idx + 1}`}</b>
                       <span className="text-[11px] text-slate-400 truncate font-mono">{item.url}</span>
                       {item.isPrimary && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#1e6354] mt-0.5">
-                          <Star size={11} className="fill-[#1e6354]" /> Primary Hero Photo
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-primary mt-0.5">
+                          <Star size={11} className="fill-brand-primary" /> Primary Hero Photo
                         </span>
                       )}
                     </div>
@@ -187,7 +193,7 @@ export function HotelMediaModal({ hotel, onClose, onSaved }: HotelMediaModalProp
                     {!item.isPrimary && (
                       <button
                         type="button"
-                        className="p-1.5 text-slate-400 hover:text-[#1e6354] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-slate-400 hover:text-brand-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                         title="Set as primary hero photo"
                         onClick={() => setPrimary(idx)}
                       >

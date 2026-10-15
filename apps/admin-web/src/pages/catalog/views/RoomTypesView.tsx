@@ -7,9 +7,10 @@ interface RoomTypesViewProps {
   rooms: RoomType[];
   loading: boolean;
   selectedHotelName?: string;
+  onAddRoomType?: () => void;
 }
 
-export function RoomTypesView({ rooms, loading, selectedHotelName }: RoomTypesViewProps) {
+export function RoomTypesView({ rooms, loading, selectedHotelName, onAddRoomType }: RoomTypesViewProps) {
   const columns: Column<RoomType>[] = [
     {
       key: 'name',
@@ -56,6 +57,17 @@ export function RoomTypesView({ rooms, loading, selectedHotelName }: RoomTypesVi
       emptyTitle="No room types configured"
       emptyCopy={`No room categories have been added for ${selectedHotelName || 'this property'} yet.`}
       emptyIcon={<BedDouble size={32} className="text-slate-400" />}
+      emptyAction={
+        onAddRoomType ? (
+          <button
+            type="button"
+            onClick={onAddRoomType}
+            className="inline-flex items-center justify-center px-4 py-2 bg-brand-primary hover:bg-brand-hover text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
+          >
+            Add room type
+          </button>
+        ) : undefined
+      }
     />
   );
 }

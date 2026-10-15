@@ -8,11 +8,15 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently -n \"api,admin\" -c \"blue,green\" \"npm run start:api\" \"npm run start:admin\"",
+    "start": "npm run dev",
     "start:api": "npm --workspace=apps/api run start:dev",
     "start:admin": "npm --workspace=apps/admin-web run dev",
     "build:api": "npm --workspace=apps/api run build",
     "build:admin": "npm --workspace=apps/admin-web run build",
-    "test:api": "npm --workspace=apps/api run test"
+    "test": "npm --workspace=apps/api run test",
+    "test:api": "npm --workspace=apps/api run test",
+    "verify:api": "npm --workspace=apps/api run verify:api"
   },
   "keywords": [
     "hotel-booking",
@@ -21,5 +25,8 @@
     "mongodb"
   ],
   "author": "Staywise Engineering Team",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
 }

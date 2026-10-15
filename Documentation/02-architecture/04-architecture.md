@@ -2,7 +2,7 @@
 
 ## Shape
 
-Use a **modular monolith**: responsive React guest/admin web clients styled with Tailwind CSS call a versioned NestJS REST API. Domain modules own their business logic and persistence. MongoDB with Mongoose is the selected persistence stack. Run MongoDB as a replica set to support multi-document transactions; use conditional atomic updates and unique indexes to protect inventory. See [tech stack](./05-tech-stack.md) and [decision log](./20-decision-log.md).
+Use a **modular monolith**: responsive React guest/admin web clients styled with Tailwind CSS call a versioned NestJS REST API. Domain modules own their business logic and persistence. MongoDB with Mongoose is the selected persistence stack. Run MongoDB as a replica set to support multi-document transactions; use conditional atomic updates and unique indexes to protect inventory. See [tech stack](./05-tech-stack.md) and [decision log](../04-planning-and-tracking/20-decision-log.md).
 
 ```mermaid
 flowchart LR

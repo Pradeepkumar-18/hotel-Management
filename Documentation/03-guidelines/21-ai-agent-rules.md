@@ -1,5 +1,7 @@
 # Contributor and AI Agent Rules
 
+> **Superseded:** every rule below is restated in more detail in [AGENT.md](../../AGENT.md), which is the authoritative agent rule file. Kept for history only.
+
 1. Read context, MVP scope, business rules and current task before changing code.
 2. Do not expand MVP scope without updating requirements and decision log.
 3. Do not claim inventory is reserved until the transactional hold succeeds.

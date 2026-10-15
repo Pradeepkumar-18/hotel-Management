@@ -1,6 +1,6 @@
 # AGENT.md — Hotel Platform Engineering Rules
 
-This file defines required working rules for developers and AI agents contributing to the hotel booking platform described in this documentation folder. Read this file and [`context.md`](./context.md) before planning or changing project artifacts. If implementation source code is in a separate repository, copy/link these instructions into that repository's applicable agent instruction file so tools load them there.
+This file defines required working rules for developers and AI agents contributing to the hotel booking platform described in the [`Documentation/`](./Documentation/README.md) folder. For how the documentation set is organised and used, see [`Documentation/DOCUMENTATION-REPORT.md`](./Documentation/DOCUMENTATION-REPORT.md). Read this file and [`context.md`](./context.md) before planning or changing project artifacts. If implementation source code is in a separate repository, copy/link these instructions into that repository's applicable agent instruction file so tools load them there.
 
 ## 1. Product goal
 
@@ -16,7 +16,7 @@ Build a dependable hotel booking and operations platform. The central promise is
 
 ## 3. Required reading and document authority
 
-Before implementation, read [`context.md`](./context.md), [`README.md`](./README.md), [`03-mvp-scope.md`](./03-mvp-scope.md), [`12-business-rules.md`](./12-business-rules.md), [`20-decision-log.md`](./20-decision-log.md), and the relevant module specification in [`modules/README.md`](./modules/README.md).
+Before implementation, read [`context.md`](./context.md), [`Documentation/README.md`](./Documentation/README.md), [`03-mvp-scope.md`](./Documentation/01-product/03-mvp-scope.md), [`12-business-rules.md`](./Documentation/01-product/12-business-rules.md), [`20-decision-log.md`](./Documentation/04-planning-and-tracking/20-decision-log.md), and the relevant module specification in [`modules/README.md`](./Documentation/modules/README.md).
 
 When documents conflict, follow this order and then update the conflicting documents:
 
@@ -63,8 +63,8 @@ If a conflict affects data, money, access control, inventory, or API behavior, s
 
 ## 6. Delivery and checklist rules
 
-- Implement in the order in [`context.md`](./context.md) and [`18-development-phases.md`](./18-development-phases.md); respect dependency gates.
-- Use [`22-module-wise-line-items-checklist.md`](./22-module-wise-line-items-checklist.md) as a tracking index, not as proof that a feature is done.
+- Implement in the order in [`context.md`](./context.md) and [`18-development-phases.md`](./Documentation/04-planning-and-tracking/18-development-phases.md); respect dependency gates.
+- Use [`22-module-wise-line-items-checklist.md`](./Documentation/04-planning-and-tracking/22-module-wise-line-items-checklist.md) as a tracking index, not as proof that a feature is done.
 - Mark `[x]` only when the item is implemented, acceptance criteria pass, failure paths are handled, and relevant verification evidence exists. Never infer completion from a plan or code stub.
 - Keep each checklist item on one line. If scope changes, update the checklist and the corresponding requirements/module doc.
 - Update impacted schemas/indexes, APIs, module specs, security rules, task board, and decision log in the same change.

@@ -11,8 +11,10 @@ import { Request, Response } from 'express';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
+import { digest } from '../../common/crypto/digest';
 import { AuditService } from '../audit/audit.service';
 import { TransactionService } from '../../common/database/transaction.service';
+import { privacySafeIp } from '../../common/utils/network.util';
 import { StaffLoginDto } from './dto/staff-login.dto';
 import { User, UserDocument, UserStatus } from './schemas/user.schema';
 import { StaffMembership, StaffMembershipDocument } from './schemas/staff-membership.schema';
@@ -35,7 +37,11 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly audit: AuditService,
     private readonly transactions: TransactionService,
-  ) {}
+  ) {
+    if (this.config.get<string>('nodeEnv') === 'production' && !this.config.get<boolean>('auth.mfaRequired')) {
+      this.logger.warn('Production environment running with MFA disabled. Set MFA_ENABLED=true once TOTP flow is enabled.');
+    }
+  }
 
   async login(dto: StaffLoginDto, request: Request, response: Response) {
     const origin = request.get('origin');
@@ -44,20 +50,25 @@ export class AuthService {
     }
     const email = dto.email.trim().toLowerCase();
     const ip = privacySafeIp(request.ip || request.socket.remoteAddress);
-    this.checkRateLimit(`identity:${email}`, 5, 15 * 60_000);
-    this.checkRateLimit(`ip:${ip}`, 20, 60 * 60_000);
+    this.checkRateLimit(`identity:${email}`, 5, 15 * 60_000, response);
+    this.checkRateLimit(`ip:${ip}`, 20, 60 * 60_000, response);
 
     const user = await this.userModel.findOne({ normalizedEmail: email, accountType: 'STAFF' }).select('+passwordHash');
     const locked = Boolean(user?.lockUntil && user.lockUntil.getTime() > Date.now());
+    if (locked) {
+      await this.recordFailedLogin(user?._id, email, ip);
+      throw new UnauthorizedException({ error: 'ACCOUNT_LOCKED', message: 'Too many failed attempts. This account is locked for a few minutes.' });
+    }
+
     const encodedHash = user?.passwordHash || await this.getDummyHash();
     const passwordMatches = await bcrypt.compare(dto.password, encodedHash);
-    if (!user || !passwordMatches || user.status !== UserStatus.ACTIVE || locked) {
+    if (!user || !passwordMatches || user.status !== UserStatus.ACTIVE) {
       await this.recordFailedLogin(user?._id, email, ip);
       throw new UnauthorizedException(INVALID_LOGIN);
     }
     this.attempts.delete(`identity:${email}`);
 
-    if (this.config.get<string>('nodeEnv') === 'production') {
+    if (this.config.get<boolean>('auth.mfaRequired', false)) {
       await this.audit.log({
         actorId: user._id.toString(),
         actorType: 'STAFF',
@@ -68,7 +79,7 @@ export class AuthService {
         reason: 'MFA_REQUIRED',
         ipAddressPrefix: ip,
       });
-      throw new UnauthorizedException({ error: 'AUTH_MFA_REQUIRED', message: 'Privileged production sign-in requires MFA' });
+      throw new UnauthorizedException({ error: 'AUTH_MFA_REQUIRED', message: 'Multi-factor sign-in is required for this account.' });
     }
 
     const membership = await this.membershipModel.findOne({ userId: user._id, status: 'ACTIVE' }).lean();
@@ -161,7 +172,7 @@ export class AuthService {
     return this.dummyHashPromise;
   }
 
-  private checkRateLimit(key: string, limit: number, windowMs: number) {
+  private checkRateLimit(key: string, limit: number, windowMs: number, response?: Response) {
     const now = Date.now();
     const current = this.attempts.get(key);
     if (!current || current.expiresAt <= now) {
@@ -169,7 +180,14 @@ export class AuthService {
       return;
     }
     if (current.count >= limit) {
-      throw new HttpException({ error: 'AUTH_RATE_LIMITED', message: 'Try signing in later' }, HttpStatus.TOO_MANY_REQUESTS);
+      const retryAfterSeconds = Math.max(1, Math.ceil((current.expiresAt - now) / 1000));
+      if (response && !response.headersSent) {
+        response.setHeader('Retry-After', String(retryAfterSeconds));
+      }
+      throw new HttpException(
+        { error: 'TOO_MANY_ATTEMPTS', message: `Too many login attempts. Please wait ${retryAfterSeconds} seconds and try again.` },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
     current.count += 1;
     if (this.attempts.size > 10000) {
@@ -179,13 +197,5 @@ export class AuthService {
   }
 }
 
-export function digest(value: string) {
-  return createHash('sha256').update(value).digest('hex');
-}
+export { digest };
 
-export function privacySafeIp(ip?: string) {
-  if (!ip) return undefined;
-  const normalized = ip.replace(/^::ffff:/, '');
-  if (normalized.includes('.')) return `${normalized.split('.').slice(0, 3).join('.')}.0/24`;
-  return `${normalized.split(':').slice(0, 4).join(':')}::/64`;
-}
