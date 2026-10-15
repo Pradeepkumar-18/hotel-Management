@@ -18,3 +18,5 @@ export * from './Loader';
 export * from './NotFound';
 export * from './Toast';
 export * from './Spinner';
+export * from './Tabs';
+export * from './ImageUploadDropzone';

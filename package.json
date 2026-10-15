@@ -16,7 +16,8 @@
     "build:admin": "npm --workspace=apps/admin-web run build",
     "test": "npm --workspace=apps/api run test",
     "test:api": "npm --workspace=apps/api run test",
-    "verify:api": "npm --workspace=apps/api run verify:api"
+    "verify:api": "npm --workspace=apps/api run verify:api",
+    "screenshots": "node scripts/capture-screenshots.js"
   },
   "keywords": [
     "hotel-booking",
@@ -27,6 +28,7 @@
   "author": "Staywise Engineering Team",
   "license": "UNLICENSED",
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "concurrently": "^10.0.6",
+    "puppeteer-core": "^25.14.0"
   }
 }

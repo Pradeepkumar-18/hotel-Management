@@ -49,6 +49,7 @@ export type Hotel = {
   slug: string;
   status: string;
   timezone: string;
+  description?: string;
   version: number;
   updatedAt?: string;
   createdAt?: string;
@@ -66,7 +67,19 @@ export type Hotel = {
   };
 };
 
-export type RoomType = { _id: string; id?: string; hotelId: string; name: string; code: string; totalRooms: number; maxAdults: number; maxChildren: number; version: number; status: string };
+export type RoomType = {
+  _id: string;
+  id?: string;
+  hotelId: string;
+  name: string;
+  code: string;
+  totalRooms: number;
+  maxAdults: number;
+  maxChildren: number;
+  version: number;
+  status: string;
+  description?: string;
+};
 export type InventoryDay = { stayDate: string; total: number; available: number; held: number; confirmed: number; blocked: number; version: number };
 
 export async function updateHotelMedia(id: string, version: number, media: HotelMediaItem[]): Promise<Hotel> {
@@ -74,6 +87,28 @@ export async function updateHotelMedia(id: string, version: number, media: Hotel
     method: 'POST',
     body: JSON.stringify({ version, media }),
   });
+}
+
+export async function uploadHotelMediaFile(file: File): Promise<{ url: string; filename: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = csrfToken || readCsrfCookie();
+  const headers: Record<string, string> = {};
+  if (token) headers['x-csrf-token'] = token;
+  const res = await fetch(`${API}/admin/hotels/media/upload`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+    headers,
+  });
+  if (!res.ok) {
+    const err = await toApiError(res);
+    throw err;
+  }
+  const data = await res.json();
+  const apiBase = API.replace(/\/api\/v1\/?$/, '');
+  const fullUrl = data.url.startsWith('http') ? data.url : `${apiBase}${data.url}`;
+  return { ...data, url: fullUrl };
 }
 
 export async function bulkUpdateHotelStatus(

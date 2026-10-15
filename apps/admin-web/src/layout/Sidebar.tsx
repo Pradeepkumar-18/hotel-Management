@@ -26,32 +26,36 @@ export function Sidebar({
   return (
     <>
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex flex-col bg-gradient-to-b from-brand-dark via-brand-deep to-brand-darkest text-slate-50 border-r border-white/10 transition-all duration-200 ease-in-out shadow-xl ${
+        className={`fixed inset-y-0 left-0 z-30 flex flex-col bg-white text-slate-800 border-r border-slate-200/90 transition-all duration-200 ease-in-out shadow-xs ${
           sidebarCollapsed ? 'w-20 p-3' : 'w-68 p-4'
         } ${mobileNav ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
         {/* Header Logo */}
-        <div className="flex items-center justify-between pb-3.5 mb-2 border-b border-white/10 shrink-0">
-          <Link className="flex items-center gap-3 font-bold text-white tracking-tight hover:opacity-95 transition-opacity" to="/admin/dashboard" title="Staywise dashboard">
-            <span className="w-10 h-10 rounded-xl bg-brand-lime text-brand-dark flex items-center justify-center font-extrabold shrink-0 shadow-md">
+        <div className="flex items-center justify-between pb-3.5 mb-2.5 border-b border-slate-100 shrink-0">
+          <Link
+            className="flex items-center gap-3 font-bold text-slate-900 tracking-tight hover:opacity-90 transition-opacity"
+            to="/admin/dashboard"
+            title="Staywise dashboard"
+          >
+            <span className="w-10 h-10 rounded-xl bg-brand-primary text-white flex items-center justify-center font-extrabold shrink-0 shadow-2xs">
               <Compass size={22} />
             </span>
             {!sidebarCollapsed && (
               <span className="flex flex-col">
-                <span className="text-base font-extrabold text-white leading-tight tracking-tight">staywise</span>
-                <span className="text-[10px] font-bold tracking-wider text-brand-sage uppercase mt-0.5">HOTEL OPERATIONS</span>
+                <span className="text-base font-extrabold text-slate-900 leading-tight tracking-tight">staywise</span>
+                <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mt-0.5">HOTEL OPERATIONS</span>
               </span>
             )}
           </Link>
           <button
-            className="p-2 rounded-lg text-slate-300 hover:text-white bg-white/5 border border-white/10 hover:bg-white/15 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-slate-200/60 transition-colors cursor-pointer"
             type="button"
             onClick={() => setSidebarCollapsed((value) => !value)}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-expanded={!sidebarCollapsed}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            {sidebarCollapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
           </button>
         </div>
 
@@ -72,10 +76,10 @@ export function Sidebar({
             const GroupIcon = group.icon;
 
             return visibleItems.length ? (
-              <section className="flex flex-col gap-0.5 mt-1" key={group.label}>
+              <section className="flex flex-col gap-1 mt-2.5" key={group.label}>
                 {!sidebarCollapsed ? (
                   <button
-                    className="w-full flex items-center justify-between px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-sage hover:text-white transition-colors rounded-md cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-700 transition-colors rounded-md cursor-pointer"
                     type="button"
                     onClick={() =>
                       setCollapsedGroups((current) => ({
@@ -86,14 +90,14 @@ export function Sidebar({
                     aria-expanded={!isCollapsed}
                     aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${group.label}`}
                   >
-                    <span className="flex items-center gap-2.5">
-                      <GroupIcon size={15} strokeWidth={2} className="text-brand-sage" />
+                    <span className="flex items-center gap-2">
+                      <GroupIcon size={15} strokeWidth={2} className="text-slate-400" />
                       <span>{group.label}</span>
                     </span>
-                    <ChevronDown className={`transition-transform duration-150 ${isCollapsed ? '-rotate-90' : ''}`} size={15} />
+                    <ChevronDown className={`transition-transform duration-150 text-slate-400 ${isCollapsed ? '-rotate-90' : ''}`} size={15} />
                   </button>
                 ) : (
-                  <div className="h-px bg-white/10 my-1.5" title={group.label} />
+                  <div className="h-px bg-slate-200/70 my-1.5" title={group.label} />
                 )}
                 {!isCollapsed &&
                   visibleItems.map(({ to, label, icon: Icon }) => (
@@ -112,31 +116,31 @@ export function Sidebar({
         </nav>
 
         {/* Footer Support & Settings */}
-        <div className="pt-3 border-t border-white/10 flex flex-col gap-2 shrink-0">
+        <div className="pt-3 border-t border-slate-100 flex flex-col gap-2 shrink-0">
           {!sidebarCollapsed && (
-            <div className="p-3.5 rounded-xl bg-white/8 border border-white/10 flex items-center gap-3">
-              <span className="w-9 h-9 rounded-lg bg-brand-lime/15 text-brand-lime flex items-center justify-center shrink-0">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center gap-3">
+              <span className="w-9 h-9 rounded-lg bg-sky-100/70 text-brand-primary flex items-center justify-center shrink-0">
                 <CircleHelp size={18} />
               </span>
               <span className="text-xs leading-tight">
-                <b className="block font-bold text-slate-100 text-[13px]">Need a hand?</b>
-                <span className="text-brand-sage text-xs leading-normal mt-0.5 block">Ask your Staywise admin</span>
+                <b className="block font-bold text-slate-800 text-[13px]">Need a hand?</b>
+                <span className="text-slate-500 text-xs leading-normal mt-0.5 block">Ask your Staywise admin</span>
               </span>
             </div>
           )}
           <button
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-[13px] font-semibold text-slate-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors disabled:opacity-60 ${
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-60 cursor-pointer ${
               sidebarCollapsed ? 'justify-center' : ''
             }`}
             type="button"
             disabled
             title="Settings are coming soon"
           >
-            <Settings size={18} className="text-brand-sage" />
+            <Settings size={18} className="text-slate-400" />
             {!sidebarCollapsed && (
               <>
-                <span className="flex-1 text-left font-semibold">Settings</span>
-                <span className="px-2 py-0.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-semibold">Upcoming</span>
+                <span className="flex-1 text-left font-medium">Settings</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-slate-200/60 text-slate-500 text-[11px] font-medium">Soon</span>
               </>
             )}
           </button>
@@ -146,7 +150,7 @@ export function Sidebar({
       {mobileNav && (
         <button
           type="button"
-          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-xs md:hidden cursor-pointer"
+          className="fixed inset-0 z-20 bg-slate-900/30 backdrop-blur-xs md:hidden cursor-pointer"
           aria-label="Close navigation"
           onClick={() => setMobileNav(false)}
         />
@@ -173,22 +177,24 @@ function NavItem({
 
   return (
     <Link
-      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all m-0 ${
+      className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all m-0 select-none ${
         collapsed ? 'justify-center' : ''
       } ${
         active
-          ? 'bg-gradient-to-r from-brand-lime/20 to-brand-lime/10 text-white font-bold border border-brand-lime/35 shadow-xs'
-          : 'text-slate-300 hover:bg-white/10 hover:text-white'
+          ? 'bg-brand-pale text-brand-primary font-semibold border border-brand-border/60 shadow-2xs'
+          : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
       }`}
       to={to}
       onClick={onClick}
       aria-label={collapsed ? label : undefined}
       title={collapsed ? label : undefined}
     >
-      <span className={`shrink-0 ${active ? 'text-brand-lime' : 'text-brand-sage'}`}>{icon}</span>
+      <span className={`shrink-0 transition-colors ${active ? 'text-brand-primary' : 'text-slate-400 group-hover:text-slate-600'}`}>
+        {icon}
+      </span>
       {!collapsed && <span className="truncate">{label}</span>}
       {!collapsed && active && (
-        <span className="ml-auto w-2 h-2 rounded-full bg-brand-lime shrink-0 shadow-xs" />
+        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-primary shrink-0 shadow-2xs" />
       )}
     </Link>
   );

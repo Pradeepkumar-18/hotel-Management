@@ -49,6 +49,8 @@ export function AppLayout({ staff, children }: AppLayoutProps) {
         <Topbar
           staff={staff}
           setMobileNav={setMobileNav}
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
           logout={logout}
           logoutAll={logoutAll}
         />

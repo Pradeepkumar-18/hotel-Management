@@ -1,5 +1,22 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { ApiConsumes, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, resolve } from 'path';
+import * as fs from 'fs';
 import { Request } from 'express';
 import { RequirePermission, StaffPermissionGuard, StaffPrincipal } from '../../common/auth/staff-permission.guard';
 import { BulkHotelStatusDto, CreateHotelDto, HotelListQueryDto, SetHotelMediaDto, UpdateHotelDto } from './dto/hotel.dto';
@@ -42,6 +59,45 @@ export class AdminHotelsController {
   @ApiOperation({ summary: 'Bulk update status for multiple selected hotels' })
   bulkStatus(@Body() dto: BulkHotelStatusDto, @Req() request: StaffRequest) {
     return this.hotels.bulkStatusUpdate(dto, request.user);
+  }
+
+  @Post('media/upload')
+  @RequirePermission('hotels.view')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload an image file for hotel photo gallery' })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req: any, file: any, cb: (error: Error | null, destination: string) => void) => {
+          const uploadDir = resolve(process.cwd(), 'uploads');
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+          cb(null, uploadDir);
+        },
+        filename: (req: any, file: any, cb: (error: Error | null, filename: string) => void) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `hotel-${uniqueSuffix}${ext}`);
+        },
+      }),
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (req: any, file: any, cb: (error: Error | null, acceptFile: boolean) => void) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp|gif|avif)$/i)) {
+          return cb(new BadRequestException('Only JPG, PNG, WebP, GIF, and AVIF images are allowed'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  uploadMedia(@UploadedFile() file: any) {
+    if (!file) throw new BadRequestException('No image file uploaded');
+    return {
+      url: `/uploads/${file.filename}`,
+      filename: file.filename,
+      originalName: file.originalname,
+      size: file.size,
+    };
   }
 
   @Get(':id')

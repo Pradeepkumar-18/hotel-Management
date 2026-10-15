@@ -1,20 +1,22 @@
 import { useState, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BedDouble, Building2, Plus, Sparkles } from 'lucide-react';
 import { Hotel, RoomType, StaffMe } from '../../api';
 import { PageHeading, Button, MetricCard, Alert } from '../../components/ui';
 import { readId } from '../../utils/helpers';
-import { useApiQuery, invalidate } from '../../hooks/useApiQuery';
+import { useApiQuery } from '../../hooks/useApiQuery';
 import { listRoomTypes } from '../../features/rooms/rooms.api';
 import { RoomTypesView } from './views/RoomTypesView';
 import { HotelRoomPicker } from './components/HotelRoomPicker';
-import { RoomCreateModal } from '../../features/rooms/RoomCreateModal';
 import { Can } from '../../features/auth/Can';
 
 export function RoomTypesPage({ staff: _staff }: { staff: StaffMe }) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const hotelId = selectedHotel ? readId(selectedHotel) : '';
+  const initialHotelParam = searchParams.get('hotel') || '';
+  const hotelId = selectedHotel ? readId(selectedHotel) : initialHotelParam;
 
   const {
     data: rooms = [],
@@ -32,6 +34,14 @@ export function RoomTypesPage({ staff: _staff }: { staff: StaffMe }) {
     [rooms]
   );
 
+  const handleAddRoom = () => {
+    navigate(hotelId ? `/admin/room-types/new?hotel=${hotelId}` : '/admin/room-types/new');
+  };
+
+  const handleEditRoom = (room: RoomType) => {
+    navigate(`/admin/room-types/${readId(room)}/edit?hotel=${hotelId}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -46,7 +56,7 @@ export function RoomTypesPage({ staff: _staff }: { staff: StaffMe }) {
               variant="primary"
               size="md"
               leftIcon={<Plus size={16} />}
-              onClick={() => setIsCreateOpen(true)}
+              onClick={handleAddRoom}
             >
               Add room type
             </Button>
@@ -54,7 +64,11 @@ export function RoomTypesPage({ staff: _staff }: { staff: StaffMe }) {
         )}
       </div>
 
-      {Boolean(error) && <Alert tone="error">{error instanceof Error ? error.message : String(error || 'Could not load room types')}</Alert>}
+      {Boolean(error) && (
+        <Alert tone="error">
+          {error instanceof Error ? error.message : String(error || 'Could not load room types')}
+        </Alert>
+      )}
 
       <HotelRoomPicker
         needsRoom={false}
@@ -64,7 +78,7 @@ export function RoomTypesPage({ staff: _staff }: { staff: StaffMe }) {
       />
 
       {selectedHotel && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <MetricCard
             label="Room categories"
             value={rooms.length}
@@ -93,19 +107,9 @@ export function RoomTypesPage({ staff: _staff }: { staff: StaffMe }) {
         rooms={rooms}
         loading={loading}
         selectedHotelName={selectedHotel?.name}
-        onAddRoomType={() => setIsCreateOpen(true)}
+        onAddRoomType={handleAddRoom}
+        onEditRoomType={handleEditRoom}
       />
-
-      {isCreateOpen && selectedHotel && (
-        <RoomCreateModal
-          hotelId={hotelId}
-          onClose={() => setIsCreateOpen(false)}
-          onCreated={() => {
-            setIsCreateOpen(false);
-            invalidate(`room-types:${hotelId}`);
-          }}
-        />
-      )}
     </div>
   );
 }

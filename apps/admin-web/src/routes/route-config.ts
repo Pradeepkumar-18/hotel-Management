@@ -30,7 +30,11 @@ export const navGroups = [
 export const routePermissions: Record<string, string> = {
   '/admin/dashboard': 'hotels.view',
   '/admin/hotels': 'hotels.view',
+  '/admin/hotels/new': 'hotels.create',
+  '/admin/hotels/:id/edit': 'hotels.view',
   '/admin/room-types': 'room_types.view',
+  '/admin/room-types/new': 'room_types.create',
+  '/admin/room-types/:id/edit': 'room_types.view',
   '/admin/inventory': 'inventory.view',
   '/admin/rates': 'rates.view',
 };

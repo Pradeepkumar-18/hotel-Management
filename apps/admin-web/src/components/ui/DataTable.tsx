@@ -49,10 +49,10 @@ export function DataTable<T>({
   className = '',
 }: DataTableProps<T>) {
   return (
-    <div className={cn('data-table-container bg-white border border-line rounded-xl shadow-2xs overflow-hidden', className)}>
+    <div className={cn('data-table-container bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden', className)}>
       {/* Top Toolbar / Filter Area Header */}
       {toolbarHeader && (
-        <div className="p-4 border-b border-line bg-surface-subtle flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="p-4 border-b border-slate-100 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3">
           {toolbarHeader}
         </div>
       )}
@@ -70,7 +70,7 @@ export function DataTable<T>({
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-surface-muted border-b border-line text-ink-muted uppercase font-bold tracking-wider text-[11px]">
+                <tr className="bg-slate-50/75 border-b border-slate-100 text-slate-500 uppercase font-bold tracking-wider text-[11px]">
                   {columns.map((col) => (
                     <th
                       key={col.key}

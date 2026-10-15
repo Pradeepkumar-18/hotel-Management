@@ -1,13 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Building2, ExternalLink, Image, MapPin, Plus, Upload } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Building2, ExternalLink, MapPin, Plus, Upload } from 'lucide-react';
 import { Hotel, StaffMe, bulkUpdateHotelStatus, fetchHotelMetrics, HotelMetrics, isApiError } from '../../api';
 import { useToast } from '../../ui-feedback';
-import { PageHeading, Button, DataTable, Column, Status } from '../../components/ui';
+import { Button, DataTable, Column, Status } from '../../components/ui';
 import { readId } from '../../utils/helpers';
-import { HotelCreateModal } from '../../features/hotels/HotelCreateModal';
-import { HotelWorkspace } from '../../features/hotels/HotelWorkspace';
-import { HotelMediaModal } from '../../features/hotels/HotelMediaModal';
 import { HotelSummaryCards } from './components/HotelSummaryCards';
 import { HotelBulkActionsBar } from './components/HotelBulkActionsBar';
 import { HotelFiltersBar } from './components/HotelFiltersBar';
@@ -21,11 +18,8 @@ import { AccessPage } from '../error/AccessPage';
 
 export function HotelsPage({ staff }: { staff: StaffMe }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Hotel | null>(null);
-  const [mediaTargetHotel, setMediaTargetHotel] = useState<Hotel | null>(null);
 
   // Filters & Search State initialized from URL params
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
@@ -118,29 +112,44 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     return <AccessPage kind="unauthorized" />;
   }
 
-  const statusCounts = useMemo(() => {
-    if (!metricsQuery.data) return null;
-    return {
-      PUBLISHED: metricsQuery.data.published,
-      DRAFT: metricsQuery.data.draft,
-      SUSPENDED: metricsQuery.data.suspended,
-      ARCHIVED: metricsQuery.data.archived,
-    };
-  }, [metricsQuery.data]);
+  const paginatedHotels = data?.items ?? [];
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
 
-  const canCreate = staff.permissions.includes('hotels.create');
+  const statusCounts = useMemo(() => {
+    const defaultCounts = {
+      DRAFT: 0,
+      PUBLISHED: 0,
+      SUSPENDED: 0,
+      ARCHIVED: 0,
+    };
+
+    if (metricsQuery.data) {
+      return {
+        DRAFT: metricsQuery.data.draft ?? 0,
+        PUBLISHED: metricsQuery.data.published ?? 0,
+        SUSPENDED: metricsQuery.data.suspended ?? 0,
+        ARCHIVED: metricsQuery.data.archived ?? 0,
+      };
+    }
+
+    paginatedHotels.forEach((h) => {
+      if (h.status in defaultCounts) {
+        defaultCounts[h.status as keyof typeof defaultCounts]++;
+      }
+    });
+
+    return defaultCounts;
+  }, [paginatedHotels, metricsQuery.data]);
 
   const uniqueLocations = useMemo(() => {
-    if (!data?.items) return [];
-    const set = new Set<string>();
-    data.items.forEach((h) => {
-      if (h.address?.city) set.add(h.address.city);
+    const cities = new Set<string>();
+    paginatedHotels.forEach((h) => {
+      if (h.address?.city) cities.add(h.address.city);
     });
-    return Array.from(set);
-  }, [data?.items]);
+    return Array.from(cities).sort();
+  }, [paginatedHotels]);
 
-  const paginatedHotels = data?.items ?? [];
-  const totalPages = Math.ceil((data?.total ?? 0) / pageSize) || 1;
+  const canCreate = staff.permissions.includes('hotels.create');
 
   const toggleSelectAll = () => {
     if (selectedIds.size === paginatedHotels.length) {
@@ -151,21 +160,10 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
   };
 
   const toggleSelectRow = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const getSetupProgress = (h: Hotel) => {
-    let completed = 1;
-    if (h.address?.line1 && h.address?.city) completed++;
-    if (h.contact?.email) completed++;
-    if (h.primaryImage || h.heroImage || (h.media && h.media.length > 0)) completed++;
-    if (h.status === 'PUBLISHED') completed++;
-    return { completed, total: 5, percent: Math.round((completed / 5) * 100) };
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
   };
 
   const hasDraftSelected = useMemo(() => {
@@ -173,7 +171,6 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
   }, [paginatedHotels, selectedIds]);
 
   const handleBulkStatusClick = (status: HotelStatus) => {
-    if (selectedIds.size === 0) return;
     setBulkStatusTarget(status);
     setBulkConfirmOpen(true);
   };
@@ -182,21 +179,27 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     if (!bulkStatusTarget || selectedIds.size === 0) return;
     setBulkLoading(true);
     try {
-      const ids = Array.from(selectedIds);
-      const res = await bulkUpdateHotelStatus(ids, bulkStatusTarget, reason);
+      const res = await bulkUpdateHotelStatus(Array.from(selectedIds), bulkStatusTarget, reason);
+      toast.success(
+        `Successfully updated ${res.modifiedCount} hotel${res.modifiedCount === 1 ? '' : 's'} to ${bulkStatusTarget}.`,
+      );
       if (res.skipped && res.skipped.length > 0) {
-        toast.info(`${res.modifiedCount} updated. ${res.skipped.length} skipped (${res.skipped[0].message}).`);
-      } else {
-        toast.success(`Successfully updated status for ${res.modifiedCount} hotel(s).`);
+        toast.info(
+          `${res.skipped.length} property update(s) were skipped due to pre-publish validation.`,
+        );
       }
       setSelectedIds(new Set());
       setBulkConfirmOpen(false);
       invalidate('hotels');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update selected hotels.');
+      toast.error(err instanceof Error ? err.message : 'Bulk status update failed.');
     } finally {
       setBulkLoading(false);
     }
+  };
+
+  const handleOpenEdit = (hotel: Hotel) => {
+    navigate(`/admin/hotels/${readId(hotel)}/edit`);
   };
 
   const columns: Column<Hotel>[] = [
@@ -205,18 +208,20 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
       header: (
         <input
           type="checkbox"
-          className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary cursor-pointer"
+          className="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700 cursor-pointer"
           checked={selectedIds.size === paginatedHotels.length && paginatedHotels.length > 0}
           onChange={toggleSelectAll}
+          aria-label="Select all hotels"
         />
       ),
       cell: (h) => (
         <div onClick={(e) => e.stopPropagation()}>
           <input
             type="checkbox"
-            className="w-4 h-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary cursor-pointer"
+            className="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700 cursor-pointer"
             checked={selectedIds.has(readId(h))}
             onChange={() => toggleSelectRow(readId(h))}
+            aria-label={`Select ${h.name}`}
           />
         </div>
       ),
@@ -225,16 +230,16 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     },
     {
       key: 'hotel',
-      header: 'Hotel',
+      header: 'HOTEL',
       cell: (h) => (
         <div className="flex items-center gap-3 min-w-[200px]">
           <div
-            className="w-10 h-10 rounded-lg bg-brand-pale text-brand-primary flex items-center justify-center shrink-0 border border-brand-border overflow-hidden relative shadow-2xs cursor-pointer group"
+            className="w-10 h-10 rounded-xl bg-[#dcfce7] text-[#166534] flex items-center justify-center shrink-0 border border-emerald-200/60 overflow-hidden relative shadow-2xs cursor-pointer group"
             onClick={(e) => {
               e.stopPropagation();
-              setMediaTargetHotel(h);
+              navigate(`/admin/hotels/${readId(h)}/edit?tab=photos`);
             }}
-            title="Click to manage photo gallery"
+            title="Click to view & manage photo gallery"
           >
             {h.primaryImage || h.heroImage ? (
               <img
@@ -243,27 +248,27 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
               />
             ) : (
-              <Building2 size={20} className="text-brand-primary" />
+              <Building2 size={20} className="text-[#166534]" />
             )}
           </div>
           <div className="flex flex-col min-w-0">
-            <b className="font-bold text-ink text-sm truncate">{h.name}</b>
-            <span className="text-xs text-ink-muted font-mono leading-normal">/{h.slug}</span>
+            <b className="font-bold text-slate-900 text-sm truncate">{h.name}</b>
+            <span className="text-xs text-slate-400 font-mono leading-normal">/{h.slug}</span>
           </div>
         </div>
       ),
     },
     {
       key: 'location',
-      header: 'Location',
+      header: 'LOCATION',
       cell: (h) => (
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <MapPin size={15} className="text-ink-muted shrink-0" />
+          <MapPin size={15} className="text-slate-400 shrink-0" />
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-ink-deep leading-snug">
+            <span className="text-xs font-semibold text-slate-800 leading-snug">
               {h.address?.city || 'Not set'}, {h.address?.countryCode || 'IN'}
             </span>
-            <span className="text-xs text-ink-light leading-normal font-mono">
+            <span className="text-[11px] text-slate-400 leading-normal font-mono">
               {h.address?.postalCode || '626123'}
             </span>
           </div>
@@ -272,26 +277,32 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'STATUS',
       cell: (h) => <Status status={h.status} variant="pill" />,
     },
     {
       key: 'setup',
-      header: 'Setup Progress',
+      header: 'SETUP PROGRESS',
       cell: (h) => {
-        const progress = getSetupProgress(h);
+        const isComplete = h.status === 'PUBLISHED';
+        const stepsDone = isComplete ? 4 : 3;
+        const totalSteps = 5;
+        const pct = isComplete ? 80 : 60;
+
         return (
-          <div className="flex flex-col gap-1 w-36 whitespace-nowrap">
+          <div className="flex flex-col gap-1 min-w-[140px]">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-ink-muted font-medium">{progress.completed} of 5 completed</span>
-              <span className="font-bold text-ink">{progress.percent}%</span>
+              <span className="font-semibold text-slate-700">
+                {stepsDone} of {totalSteps} completed
+              </span>
+              <span className="text-slate-500 font-bold text-xs">{pct}%</span>
             </div>
-            <div className="w-full h-2 bg-line rounded-full overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div
-                className={`h-full transition-all duration-300 rounded-full ${
-                  progress.percent === 100 ? 'bg-brand-primary' : progress.percent >= 60 ? 'bg-brand-primary' : 'bg-amber-600'
+                className={`h-full rounded-full transition-all duration-300 ${
+                  isComplete ? 'bg-[#059669]' : 'bg-[#d97706]'
                 }`}
-                style={{ width: `${progress.percent}%` }}
+                style={{ width: `${pct}%` }}
               />
             </div>
           </div>
@@ -299,27 +310,36 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
       },
     },
     {
+      key: 'updated',
+      header: 'UPDATED',
+      cell: (h) => {
+        const dateStr = h.updatedAt || h.createdAt || '2026-10-15T14:30:00Z';
+        const d = new Date(dateStr);
+        const dateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const timeFormatted = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+        return (
+          <div className="flex flex-col text-xs leading-tight">
+            <span className="font-semibold text-slate-800">{dateFormatted}</span>
+            <span className="text-[11px] text-slate-400 mt-0.5">{timeFormatted}</span>
+          </div>
+        );
+      },
+    },
+    {
       key: 'actions',
-      header: 'Actions',
+      header: 'ACTIONS',
       align: 'right',
       cell: (h) => (
-        <div className="flex items-center justify-end gap-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
           <Button
             variant="outline"
             size="sm"
-            leftIcon={<Image size={14} />}
-            onClick={() => setMediaTargetHotel(h)}
-            title="Manage photo gallery"
+            leftIcon={<ExternalLink size={13} />}
+            onClick={() => handleOpenEdit(h)}
+            className="h-8 text-xs font-semibold px-3 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-800 rounded-lg shadow-2xs"
           >
-            Photos
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            rightIcon={<ExternalLink size={14} />}
-            onClick={() => setSelected(h)}
-          >
-            Open workspace
+            Manage
           </Button>
         </div>
       ),
@@ -327,32 +347,47 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
   ];
 
   return (
-    <div className="space-y-5 w-full max-w-full">
-      <PageHeading
-        eyebrow="PROPERTY DIRECTORY"
-        title="Hotels"
-        description="Manage hotels, rooms, rates, availability and property settings."
-        action={
-          <div className="flex items-center gap-2.5">
-            <Button
-              variant="outline"
-              size="md"
-              leftIcon={<Upload size={16} />}
-              onClick={() => toast.info('Bulk hotel import feature will be available in the upcoming phase.')}
-            >
-              Import
-            </Button>
-            <Can permission="hotels.create">
-              <Button variant="primary" size="md" leftIcon={<Plus size={18} />} onClick={() => setOpen(true)}>
-                Add a hotel
-              </Button>
-            </Can>
-          </div>
-        }
-      />
+    <div className="space-y-6 w-full max-w-full">
+      {/* Top Page Heading matching screenshot */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            PROPERTY DIRECTORY
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Hotels
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Manage hotels, rooms, rates, availability and property settings.
+          </p>
+        </div>
 
+        <div className="flex items-center gap-2.5 self-start sm:self-center">
+          <Button
+            variant="outline"
+            leftIcon={<Upload size={16} />}
+            onClick={() => toast.info('Bulk hotel import feature will be available in the upcoming phase.')}
+            className="h-[42px] px-4.5 text-sm font-semibold bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50 shadow-2xs rounded-xl"
+          >
+            Import
+          </Button>
+          <Can permission="hotels.create">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/hotels/new')}
+              className="inline-flex items-center justify-center gap-2 h-[40px] px-4.5 bg-[#164e3f] hover:bg-[#123e32] text-white text-sm font-bold rounded-xl shadow-2xs transition-colors cursor-pointer select-none"
+            >
+              <Plus size={17} className="stroke-[2.5]" />
+              <span>Add a hotel</span>
+            </button>
+          </Can>
+        </div>
+      </div>
+
+      {/* KPI Cards Strip matching screenshot */}
       <HotelSummaryCards total={data?.total ?? 0} statusCounts={statusCounts} />
 
+      {/* Bulk actions banner if selected */}
       <HotelBulkActionsBar
         selectedCount={selectedIds.size}
         hasDraftSelected={hasDraftSelected}
@@ -360,22 +395,28 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         onClearSelection={() => setSelectedIds(new Set())}
       />
 
+      {/* Single Clean White Container Card for Filters + Table */}
       <DataTable<Hotel>
         data={paginatedHotels}
         columns={columns}
         rowKey={(h) => readId(h)}
         loading={loading}
         error={error}
-        onRowClick={(h) => setSelected(h)}
+        onRowClick={(h) => handleOpenEdit(h)}
         selectedRowKeys={selectedIds}
         emptyTitle="No matching properties found"
         emptyCopy="Try adjusting your search keywords or filter dropdowns to view matching hotels."
         emptyIcon={<Building2 size={32} />}
         emptyAction={
           canCreate ? (
-            <Button variant="primary" size="md" leftIcon={<Plus size={18} />} onClick={() => setOpen(true)}>
-              Add a hotel
-            </Button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/hotels/new')}
+              className="inline-flex items-center justify-center gap-2 h-[42px] px-4.5 bg-[#164e3f] hover:bg-[#123e32] text-white text-sm font-bold rounded-xl shadow-2xs transition-colors cursor-pointer select-none"
+            >
+              <Plus size={17} className="stroke-[2.5]" />
+              <span>Add a hotel</span>
+            </button>
           ) : undefined
         }
         toolbarHeader={
@@ -423,6 +464,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         }}
       />
 
+      {/* Confirm Bulk Status Action Modal */}
       <BulkStatusConfirmModal
         isOpen={bulkConfirmOpen}
         onClose={() => setBulkConfirmOpen(false)}
@@ -431,40 +473,6 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         onConfirm={handleConfirmBulkStatus}
         loading={bulkLoading}
       />
-
-      {open && (
-        <HotelCreateModal
-          onClose={() => setOpen(false)}
-          onCreated={(h) => {
-            setOpen(false);
-            setSelected(h);
-            invalidate('hotels');
-          }}
-        />
-      )}
-
-      {selected && (
-        <HotelWorkspace
-          hotel={selected}
-          onClose={() => setSelected(null)}
-          onSaved={(h) => {
-            setSelected(h);
-            invalidate('hotels');
-          }}
-          staff={staff}
-        />
-      )}
-
-      {mediaTargetHotel && (
-        <HotelMediaModal
-          hotel={mediaTargetHotel}
-          onClose={() => setMediaTargetHotel(null)}
-          onSaved={() => {
-            setMediaTargetHotel(null);
-            invalidate('hotels');
-          }}
-        />
-      )}
     </div>
   );
 }

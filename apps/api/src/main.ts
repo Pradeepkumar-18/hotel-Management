@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
+import * as express from 'express';
+import { resolve } from 'path';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { flattenValidationErrors } from './common/validation/flatten-validation-errors';
@@ -17,8 +19,9 @@ async function bootstrap() {
   const apiPrefix = configService.get<string>('apiPrefix', '/api/v1');
   const corsOrigins = configService.get<string[]>('corsOrigins', []);
 
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cookieParser());
+  app.use('/uploads', express.static(resolve(process.cwd(), 'uploads')));
 
   const nodeEnv = configService.get<string>('nodeEnv', 'development');
   const effectiveOrigins =

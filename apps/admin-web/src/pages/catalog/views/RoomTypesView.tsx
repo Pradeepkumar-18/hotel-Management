@@ -1,6 +1,6 @@
-import { BedDouble } from 'lucide-react';
+import { BedDouble, Pencil } from 'lucide-react';
 import { RoomType } from '../../../api';
-import { DataTable, Column, Status } from '../../../components/ui';
+import { DataTable, Column, Status, Button } from '../../../components/ui';
 import { readId } from '../../../utils/helpers';
 
 interface RoomTypesViewProps {
@@ -8,9 +8,10 @@ interface RoomTypesViewProps {
   loading: boolean;
   selectedHotelName?: string;
   onAddRoomType?: () => void;
+  onEditRoomType?: (room: RoomType) => void;
 }
 
-export function RoomTypesView({ rooms, loading, selectedHotelName, onAddRoomType }: RoomTypesViewProps) {
+export function RoomTypesView({ rooms, loading, selectedHotelName, onAddRoomType, onEditRoomType }: RoomTypesViewProps) {
   const columns: Column<RoomType>[] = [
     {
       key: 'name',
@@ -46,6 +47,30 @@ export function RoomTypesView({ rooms, loading, selectedHotelName, onAddRoomType
       header: 'Status',
       cell: (room) => <Status status={room.status} />,
     },
+    ...(onEditRoomType
+      ? [
+          {
+            key: 'actions',
+            header: 'Actions',
+            className: 'w-24 text-right',
+            cell: (room: RoomType) => (
+              <div className="flex items-center justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  leftIcon={<Pencil size={13} />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditRoomType(room);
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
+            ),
+          } as Column<RoomType>,
+        ]
+      : []),
   ];
 
   return (
