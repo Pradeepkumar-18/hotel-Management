@@ -1,9 +1,14 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
+  IsDateString,
   IsEmail,
+  IsIn,
+  IsISO31661Alpha2,
+  IsISO4217CurrencyCode,
   IsEnum,
   IsInt,
   IsLatitude,
@@ -17,16 +22,38 @@ import {
   Min,
   MinLength,
   ValidateNested,
+  registerDecorator,
+  ValidationArguments,
 } from 'class-validator';
 import { HotelStatus } from '../schemas/hotel.schema';
 import { CancellationFeeBasis } from '../schemas/hotel.schema';
+
+/** Postal code rules per country. Only India is enforced today (6-digit PIN, first digit 1–9). */
+const POSTAL_PATTERNS: Record<string, RegExp> = { IN: /^[1-9][0-9]{5}$/ };
+
+function IsPostalCodeForCountry() {
+  return (object: object, propertyName: string) =>
+    registerDecorator({
+      name: 'isPostalCodeForCountry',
+      target: object.constructor,
+      propertyName,
+      validator: {
+        validate(value: unknown, args: ValidationArguments) {
+          const country = String((args.object as { countryCode?: string }).countryCode ?? '').toUpperCase();
+          const pattern = POSTAL_PATTERNS[country];
+          return !pattern || (typeof value === 'string' && pattern.test(value.trim()));
+        },
+        defaultMessage: () => 'postalCode must be a 6-digit PIN code for India',
+      },
+    });
+}
 
 export class CancellationFeeRuleDto {
   @IsEnum(CancellationFeeBasis) basis: CancellationFeeBasis;
   @ValidateIf((value) => value.basis === CancellationFeeBasis.FIXED_MINOR_UNITS)
   @IsInt() @Min(0) @Max(9000000000000) amountMinorUnits?: number;
   @ValidateIf((value) => value.basis === CancellationFeeBasis.FIXED_MINOR_UNITS)
-  @IsString() @Matches(/^[A-Za-z]{3}$/) currency?: string;
+  @IsString() @IsISO4217CurrencyCode({ message: 'currency must be a valid ISO 4217 code' }) currency?: string;
   @ValidateIf((value) => value.basis === CancellationFeeBasis.PERCENTAGE_BPS)
   @IsInt() @Min(0) @Max(10000) percentageBps?: number;
 }
@@ -43,8 +70,8 @@ export class HotelAddressDto {
   @IsOptional() @IsString() @MaxLength(240) line2?: string;
   @IsString() @MinLength(1) @MaxLength(120) city: string;
   @IsOptional() @IsString() @MaxLength(120) region?: string;
-  @IsString() @MinLength(1) @MaxLength(80) postalCode: string;
-  @IsString() @Matches(/^[A-Za-z]{2}$/) countryCode: string;
+  @IsString() @MinLength(1) @MaxLength(80) @IsPostalCodeForCountry() postalCode: string;
+  @IsString() @IsISO31661Alpha2({ message: 'countryCode must be a valid ISO 3166-1 alpha-2 code' }) countryCode: string;
 }
 
 export class HotelContactDto {
@@ -80,8 +107,12 @@ export class UpdateHotelDto {
 }
 
 export class HotelMediaItemDto {
-  @IsString() @MinLength(5) @MaxLength(1000) url: string;
-  @IsOptional() isPrimary?: boolean;
+  // Older records stored uploads as absolute http(s)://<api-host>/uploads/x; keep only the path.
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().replace(/^https?:\/\/[^/\s]+(\/uploads\/[A-Za-z0-9._-]+)$/, '$1') : value))
+  @IsString() @MaxLength(1000)
+  @Matches(/^(https:\/\/\S+|\/uploads\/[A-Za-z0-9._-]+)$/, { message: 'url must be an https:// address or an uploaded /uploads/ file' })
+  url: string;
+  @IsOptional() @IsBoolean() isPrimary?: boolean;
   @IsOptional() @IsString() @MaxLength(200) caption?: string;
   @IsOptional() @IsInt() @Min(0) displayOrder?: number;
 }
@@ -103,6 +134,7 @@ export class HotelListQueryDto {
   @IsOptional() @IsEnum(HotelStatus) status?: HotelStatus;
   @IsOptional() @IsString() @MaxLength(120) city?: string;
   @IsOptional() @IsString() @MaxLength(100) search?: string;
-  @IsOptional() @IsString() @MaxLength(30) setupStatus?: string;
+  @IsOptional() @IsIn(['COMPLETED', 'IN_PROGRESS']) setupStatus?: 'COMPLETED' | 'IN_PROGRESS';
+  @IsOptional() @IsDateString() updatedSince?: string;
 }
 

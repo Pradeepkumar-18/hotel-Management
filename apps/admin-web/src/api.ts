@@ -58,7 +58,7 @@ export type Hotel = {
   images?: string[];
   media?: HotelMediaItem[];
   contact?: { email?: string; phone?: string };
-  address: { city: string; countryCode: string; line1?: string; postalCode?: string };
+  address: { city: string; countryCode: string; line1?: string; line2?: string; region?: string; postalCode?: string };
   cancellationPolicy?: {
     effectiveFrom: string;
     freeCancellationHoursBeforeCheckIn: number;

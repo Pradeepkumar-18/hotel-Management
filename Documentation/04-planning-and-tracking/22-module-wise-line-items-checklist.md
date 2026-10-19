@@ -40,12 +40,16 @@
 ## 3. Hotel Management
 
 - [x] Create hotel schema with name, slug, city, address, coordinates, and time zone
-- [ ] Add hotel description, star category, amenities, and contact information
+- [x] Add hotel description, address, contact information, creative unified command center workspace (`apps/admin-web/src/features/hotels/HotelWorkspace.tsx`) with 1 smart primary action, `···` menu, floating save bar, room creation, cancellation policies, and pre-publish readiness gates (evidence: .agent/work/20261016-restore-hotel-workspace-flow/verify.md)
 - [ ] Add cancellation, check-in, checkout, and guest policies
 - [x] Admin property directory UI, workspace drawer, and publication readiness checks
 - [x] Validate unique hotel slugs and required property details
-- [x] Implement `POST /admin/hotels/:id/media` photo upload API with primary image selection, gallery ordering, and frontend modal primitive
+- [x] Form field typing Phase A+B: India PIN, ISO country/currency, https/`/uploads` media URLs, JPEG/PNG/WebP uploads, room code pattern, clearable room description, conditional room-count reason, cities + updatedSince list filters; shared Checkbox/DatePicker/Combobox/PasswordInput/ReasonField (evidence: .agent/work/20261019-field-types-phase-ab/verify.md)
+- [x] Hotel form keeps address line 2 and state/region on edit (state dropdown for India); inventory block/unblock reason validation fixed (`@MinLength(3)`) (evidence: Documentation/06-analysis/form-field-type-analysis.md, Status update)
+- [x] Simplified Add/Edit hotel UI: one shared fields block (`HotelDetailsFields`) with slug auto-fill and country/time-zone dropdowns, workspace on shared `Tabs` (Details, Photos, Rooms, Cancellation policy), archived read-only banner; all money inputs (base rate, fixed cancellation/no-show fee) typed in rupees via shared `MoneyInput` and sent as integer minor units (evidence: .agent/work/20261019-simplify-hotel-forms-inr-money/verify.md)
+- [x] Implement `POST /admin/hotels/:id/media` photo upload API with primary image selection, gallery ordering, dedicated upload popup dialog, centered photo details modal for caption editing/cover selection, and reusable `ConfirmDialog` for photo deletions with popup bypass (evidence: .agent/work/20261016-delete-confirmation-dialog/verify.md)
 - [x] Implement Mongoose text index and backend query multi-filters (`search`, `city`, `setupStatus`) on `GET /admin/hotels`
+- [x] Hide archived hotels from `GET /admin/hotels` and the hotel list unless `status=ARCHIVED` is requested; fix `setupStatus` overriding `status` (evidence: .agent/work/20261019-hide-archived-hotels/verify.md)
 - [x] Implement `PATCH /admin/hotels/bulk-status` endpoint for multi-select floating action bar status updates
 - [ ] Implement `POST /admin/hotels/import` and `GET /admin/hotels/export` for bulk CSV property directory operations (Phase 4 planned)
 - [ ] Prevent disabling or deleting hotels with active confirmed stays without a resolution flow

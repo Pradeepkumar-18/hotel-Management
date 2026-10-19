@@ -1,5 +1,6 @@
 import { Search, SlidersHorizontal } from 'lucide-react';
-import { Button, Input, Select } from '../../../components/ui';
+import { Button, Combobox, Input, Select } from '../../../components/ui';
+import { HotelStatus, STATUS_LABEL } from '../../../features/hotels/hotel-status';
 
 interface HotelFiltersBarProps {
   searchQuery: string;
@@ -35,7 +36,9 @@ export function HotelFiltersBar({
       {/* Search Input */}
       <div className="flex-1 min-w-[200px] max-w-md">
         <Input
-          type="text"
+          type="search"
+          maxLength={100}
+          aria-label="Search hotels"
           placeholder="Search by hotel name, slug, city or ID..."
           leftIcon={<Search size={15} />}
           value={searchQuery}
@@ -48,24 +51,23 @@ export function HotelFiltersBar({
         <div className="flex flex-col gap-0.5 min-w-[120px]">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</span>
           <Select size="sm" value={statusFilter} onChange={(e) => onStatusChange(e.target.value)}>
-            <option value="ALL">All statuses</option>
-            <option value="DRAFT">Draft</option>
-            <option value="PUBLISHED">Published</option>
-            <option value="SUSPENDED">Paused</option>
-            <option value="ARCHIVED">Archived</option>
+            <option value="ALL">All (excluding archived)</option>
+            {(Object.keys(STATUS_LABEL) as HotelStatus[]).map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
           </Select>
         </div>
 
-        <div className="flex flex-col gap-0.5 min-w-[120px]">
+        <div className="flex flex-col gap-0.5 min-w-[160px]">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Location</span>
-          <Select size="sm" value={locationFilter} onChange={(e) => onLocationChange(e.target.value)}>
-            <option value="ALL">All locations</option>
-            {uniqueLocations.map((loc) => (
-              <option value={loc} key={loc}>
-                {loc}
-              </option>
-            ))}
-          </Select>
+          <Combobox
+            size="sm"
+            aria-label="Filter by city"
+            value={locationFilter}
+            onChange={onLocationChange}
+            options={[{ value: 'ALL', label: 'All locations' }, ...uniqueLocations.map((c) => ({ value: c, label: c }))]}
+            selectedLabel={locationFilter === 'ALL' ? 'All locations' : locationFilter}
+          />
         </div>
 
         <div className="flex flex-col gap-0.5 min-w-[120px]">

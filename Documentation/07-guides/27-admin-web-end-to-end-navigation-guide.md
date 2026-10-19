@@ -16,10 +16,12 @@
 | `/admin` | Redirect | None | Redirect | None | None | None | No | Redirects immediately to `homePath(staff)`. |
 | `/admin/unauthorized` | `AccessPage` (`kind="unauthorized"`) | `AppLayout` | Protected | None | None | None | No | Displays `403 · NO ACCESS`. Primary landing for staff without any navigation permissions. |
 | `/admin/dashboard` | `DashboardPage` | `AppLayout` | Protected | `hotels.view` | None | **Dashboard** | No | KPI overview cards, recent hotels table, and quick navigation shortcuts. |
-| `/admin/hotels` | `HotelsPage` | `AppLayout` | Protected | `hotels.view` | `?search=` (from Topbar search) | **Property setup > Hotels** | No | Property directory, search/filters, pagination, bulk status changes, creation & workspace modals. |
+| `/admin/hotels` | `HotelsPage` | `AppLayout` | Protected | `hotels.view` | `?search=` (from Topbar search) | **Property setup > Hotels** | No | Property directory, search/filters, pagination, bulk status changes. Archived hotels are hidden by default (Status filter default "All (excluding archived)"); choose **Archived** in the Status filter to see them. The "Active Hotels" card counts draft + published + suspended. |
+| `/admin/hotels/new` | `HotelCreatePage` | `AppLayout` | Protected | `hotels.create` | None | (from **Add a hotel**) | No | Add-hotel form (shared `HotelDetailsFields`: Basics, Contact, Location) plus optional photos. Creates a `DRAFT` and opens the edit page. |
+| `/admin/hotels/:id/edit` | `HotelEditPage` | `AppLayout` | Protected | `hotels.view` | `?tab=photos|rooms|policy` | (from hotel row) | No | Hotel workspace: status actions (Publish / Suspend / Reactivate / Archive) and tabs Details, Photos, Rooms, Cancellation policy. Archived hotels are read-only. |
 | `/admin/room-types` | `RoomTypesPage` | `AppLayout` | Protected | `room_types.view` | `?hotel=<hotelId>` | **Property setup > Room types** | No | Room category listing, total sellable inventory counts, and category creation modal. |
 | `/admin/inventory` | `InventoryPage` | `AppLayout` | Protected | `inventory.view` | `?hotel=<hotelId>&room=<roomId>` | **Operations > Availability** | No | 14-day rolling availability calendar, night initialization, and block/unblock modal. |
-| `/admin/rates` | `RatesPage` | `AppLayout` | Protected | `rates.view` | `?hotel=<hotelId>&room=<roomId>` | **Operations > Base rates** | No | Base nightly pricing configuration in integer minor units with currency rules and rate coverage. |
+| `/admin/rates` | `RatesPage` | `AppLayout` | Protected | `rates.view` | `?hotel=<hotelId>&room=<roomId>` | **Operations > Base rates** | No | Base nightly pricing. Staff type rupees; the UI sends integer minor units (paise). Currency rules and rate coverage. |
 | `*` (Catch-all) | `AccessPage` (`kind="not-found"`) | `AppLayout` | Protected | None | None | None | No | Displays `404 · NOT FOUND` with a button returning to `homePath(staff)`. |
 
 ### 1.2 Routing Rules & Fallbacks
@@ -191,9 +193,9 @@ Staywise defines stable, code-owned permissions versioned in the database (`seed
 ```
 
 #### Step 1: Create Draft Property
-- **For users:** On `/admin/hotels`, click the green **Add a hotel** button. A modal opens. Fill in Name (*"The Grand Palace"*), Slug (*"grand-palace"*), Street address (*"12 Residency Rd"*), City (*"Bengaluru"*), Postal code (*"560001"*), Country (*"IN"*), Timezone (*"Asia/Kolkata"*), and Contact email (*"desk@grandpalace.com"*). Click **Save draft property**.
+- **For users:** On `/admin/hotels`, click the green **Add a hotel** button. The **Add a hotel** page (`/admin/hotels/new`) opens. Under **Basics** type the Name (*"The Grand Palace"*); the **Web address** fills itself (*"the-grand-palace"*) and can be changed. Under **Contact** enter Email (*"desk@grandpalace.com"*) and optionally Phone. Under **Location** enter Street address, City, Postal code, and pick Country (default *India*) and Time zone (default *India (IST)*) from the dropdowns. Optionally add photos. Click **Create hotel**.
 - **Technical:**
-  - Component: `HotelCreateModal`
+  - Page / components: `HotelCreatePage` → `HotelCreateForm` → shared `HotelDetailsFields` (same fields block as the edit page)
   - API: `POST /api/v1/admin/hotels`
   - Body:
     ```json
@@ -206,12 +208,13 @@ Staywise defines stable, code-owned permissions versioned in the database (`seed
     }
     ```
   - State: Creates hotel with `status: "DRAFT"`, `version: 0`.
-  - Cache: Invalidates tag `hotels`. Closes create modal and immediately opens `HotelWorkspace`.
+  - If photos were added, a second call `POST /api/v1/admin/hotels/:id/media` saves them. If that call fails the hotel is still created and a toast tells the user to add the photos again in the **Photos** tab.
+  - Cache: Invalidates tag `hotels`. Navigates to `/admin/hotels/:id/edit` (the hotel workspace).
 
 #### Step 2: Configure Cancellation Terms
-- **For users:** Inside the Workspace modal, scroll to **Cancellation & check-in policy**. Choose an effective date (today or earlier), enter free cancellation cutoff (*"24"* hours), and choose After-cutoff and No-show penalties. Click **Save cancellation terms**.
+- **For users:** On the edit page (`/admin/hotels/:id/edit`) open the **Cancellation policy** tab. Choose **Applies from** (today or earlier), **Free cancellation until** (*"24"* hours before check-in), and the **Fee for late cancellation** and **Fee for no-show** (No fee / Full stay amount / Fixed amount / Percentage of stay). A fixed amount is typed in rupees (e.g. *"1500.50"*); the UI sends paise (`150050`) with currency `INR` (or the currency already saved on the policy). Click **Save policy**.
 - **Technical:**
-  - Component: `HotelWorkspace:89-122`
+  - Components: `HotelWorkspace` (tab `?tab=policy`) → `CancellationPolicyFields` (uses shared `MoneyInput`)
   - API: `PATCH /api/v1/admin/hotels/:id`
   - Body:
     ```json
@@ -225,12 +228,12 @@ Staywise defines stable, code-owned permissions versioned in the database (`seed
       }
     }
     ```
-  - Success Toast: *"Cancellation and no-show terms saved."* Version increments to `1`.
+  - Success Toast: *"Cancellation policy saved."* Version increments to `1`.
 
 #### Step 3: Add Property Photos
-- **For users:** Close workspace or click **Photos** in the hotel table row. In the Photo Gallery modal, enter an image URL (e.g. Unsplash URL) and caption, click **Add photo**, mark it as Primary, and click **Save photo gallery**.
+- **For users:** On the edit page open the **Photos** tab (badge shows the photo count). Upload or add photos, set captions, mark one as Primary, and click **Save photos**.
 - **Technical:**
-  - Component: `HotelMediaModal`
+  - Components: `HotelWorkspace` (tab `?tab=photos`) → `HotelMediaGalleryManager`
   - API: `POST /api/v1/admin/hotels/:id/media`
   - Body: `{ "version": 1, "media": [{ "url": "https://images.unsplash.com/...", "isPrimary": true, "caption": "Facade", "displayOrder": 0 }] }`
   - Cache: Invalidates tag `hotels`. Version increments to `2`.
@@ -244,9 +247,9 @@ Staywise defines stable, code-owned permissions versioned in the database (`seed
   - Cache: Invalidates `room-types:<hotelId>`. Toast: *"Room type added."*
 
 #### Step 5: Set Base Nightly Rates
-- **For users:** Navigate to `/admin/rates`. The property and room type are pre-selected in the URL (`?hotel=...&room=...`). Under **Set base rate**, enter Amount in minor units (*"450000"* for ₹4,500.00), Currency (*"INR"*), and Reason for change (*"Initial launch rate"*). Click **Save base rate**.
+- **For users:** Navigate to `/admin/rates`. The property and room type are pre-selected in the URL (`?hotel=...&room=...`). Enter **Price per night** in rupees (*"4500"* or *"4500.50"*; the ₹ sign is shown in the box), keep Currency *INR* (locked once the hotel has a rate), and enter Reason for change (*"Initial launch rate"*). Click **Set base rate** / **Save base rate**. The current rate is shown formatted, e.g. *₹4,500.00 per night, before tax*.
 - **Technical:**
-  - Component: `RatesPage:68-126`
+  - Components: `RatesPage.handleSaveRate` → `BaseRatesView` (shared `MoneyInput` converts rupees to paise: 4500 → 450000)
   - API: `PUT /api/v1/admin/room-types/:roomTypeId/base-rate`
   - Body: `{ "amountMinorUnits": 450000, "currency": "INR", "reason": "Initial launch rate" }`
   - Cache: Invalidates `rate:<roomTypeId>`. Toast: *"Base rate saved. Tax is not included."*
@@ -277,7 +280,7 @@ Staywise defines stable, code-owned permissions versioned in the database (`seed
 
 #### Scenario 1: Update Base Rate
 1. Navigate to `/admin/rates?hotel=<id>&room=<id>`.
-2. Enter new amount: `500000` (₹5,000.00), Currency: `INR`, Reason: *"Weekend surge pricing"*.
+2. Enter new price per night: `5000` (sent as `500000` paise), Reason: *"Weekend surge pricing"*.
 3. Click **Save base rate**.
 4. **Technical:** Sends `PUT /api/v1/admin/room-types/:id/base-rate` with `{ version: <currentRateVersion>, amountMinorUnits: 500000, currency: "INR", reason: "Weekend surge pricing" }`.
 

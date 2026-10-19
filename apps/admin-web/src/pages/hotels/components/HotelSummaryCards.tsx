@@ -10,7 +10,7 @@ export function HotelSummaryCards({ total, statusCounts }: HotelSummaryCardsProp
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
       <MetricCard
-        label="Total Hotels"
+        label="Active Hotels"
         value={total}
         detail="↑ 2 this month"
         icon={<Building2 size={16} />}
@@ -40,7 +40,7 @@ export function HotelSummaryCards({ total, statusCounts }: HotelSummaryCardsProp
       <MetricCard
         label="Archived"
         value={statusCounts?.ARCHIVED ?? 0}
-        detail="No longer active"
+        detail="Hidden from list · use Archived filter"
         icon={<Archive size={16} />}
         tone="slate"
       />

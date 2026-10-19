@@ -72,15 +72,20 @@ export class HotelService {
 
   async list(query: HotelListQueryDto, actor: StaffPrincipal) {
     const filter: Record<string, unknown> = {};
-    if (query.status) filter.status = query.status;
+    // Archived hotels are hidden unless explicitly requested with status=ARCHIVED.
+    const statusConditions: Record<string, unknown>[] = [
+      { status: query.status ?? { $ne: HotelStatus.ARCHIVED } },
+    ];
+    if (query.setupStatus === 'COMPLETED') {
+      statusConditions.push({ status: HotelStatus.PUBLISHED });
+    } else if (query.setupStatus === 'IN_PROGRESS') {
+      statusConditions.push({ status: { $ne: HotelStatus.PUBLISHED } });
+    }
+    filter.$and = statusConditions;
     if (query.city) filter['address.city'] = new RegExp(`^${escapeRegex(query.city.trim())}$`, 'i');
+    if (query.updatedSince) filter.updatedAt = { $gte: new Date(query.updatedSince) };
     if (query.search?.trim()) {
       filter.$text = { $search: query.search.trim() };
-    }
-    if (query.setupStatus === 'COMPLETED') {
-      filter.status = HotelStatus.PUBLISHED;
-    } else if (query.setupStatus === 'IN_PROGRESS') {
-      filter.status = { $ne: HotelStatus.PUBLISHED };
     }
     if (actor.role !== 'SUPER_ADMIN') filter._id = { $in: (actor.hotelIds || []).map(asObjectId) };
     const [items, total] = await Promise.all([
@@ -88,6 +93,14 @@ export class HotelService {
       this.hotelModel.countDocuments(filter),
     ]);
     return { items, total, limit: query.limit, offset: query.offset };
+  }
+
+  /** Distinct cities of non-archived hotels in the actor's scope, for the list's Location filter. */
+  async listCities(actor: StaffPrincipal): Promise<string[]> {
+    const filter: Record<string, unknown> = { status: { $ne: HotelStatus.ARCHIVED } };
+    if (actor.role !== 'SUPER_ADMIN') filter._id = { $in: (actor.hotelIds || []).map(asObjectId) };
+    const cities: string[] = await this.hotelModel.distinct('address.city', filter);
+    return cities.filter(Boolean).sort((a, b) => a.localeCompare(b));
   }
 
   async getMetrics(actor: StaffPrincipal): Promise<{

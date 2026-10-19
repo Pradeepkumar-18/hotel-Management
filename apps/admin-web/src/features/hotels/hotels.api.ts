@@ -11,6 +11,8 @@ export type ListHotelsParams = {
   status?: string;
   city?: string;
   setupStatus?: string;
+  /** ISO timestamp: only hotels updated at or after this moment. */
+  updatedSince?: string;
   limit?: number;
   offset?: number;
 };
@@ -23,9 +25,15 @@ export function listHotels(params: ListHotelsParams = {}, signal?: AbortSignal) 
   if (params.city && params.city !== 'ALL') q.set('city', params.city);
   if (params.setupStatus && params.setupStatus !== 'ALL') q.set('setupStatus', params.setupStatus);
   if (params.search && params.search.trim()) q.set('search', params.search.trim());
+  if (params.updatedSince) q.set('updatedSince', params.updatedSince);
 
   const qs = q.toString();
   return request<HotelList>(`/admin/hotels${qs ? `?${qs}` : ''}`, { signal });
+}
+
+/** Distinct cities of non-archived hotels in the staff member's scope. */
+export function listHotelCities(signal?: AbortSignal) {
+  return request<string[]>('/admin/hotels/cities', { signal });
 }
 
 export function fetchRecentHotels(limit = 8, signal?: AbortSignal) {

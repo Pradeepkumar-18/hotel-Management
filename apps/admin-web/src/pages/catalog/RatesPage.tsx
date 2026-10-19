@@ -83,12 +83,14 @@ export function RatesPage({ staff }: { staff: StaffMe }) {
 
     const form = e.currentTarget;
     const f = new FormData(form);
-    const amountVal = Number(f.get('amount'));
+    // MoneyInput already converted the typed rupees into integer minor units.
+    const amountRaw = String(f.get('amountMinorUnits') ?? '');
+    const amountVal = Number(amountRaw);
     const currencyVal = String(f.get('currency')).trim().toUpperCase();
     const reasonVal = String(f.get('reason')).trim();
 
-    if (!Number.isInteger(amountVal) || amountVal < 0) {
-      toast.error('Amount must be a non-negative whole integer (minor units)');
+    if (!amountRaw || !Number.isSafeInteger(amountVal) || amountVal < 0) {
+      toast.error('Enter a valid price, e.g. 2499 or 2499.50');
       return;
     }
 
@@ -98,7 +100,7 @@ export function RatesPage({ staff }: { staff: StaffMe }) {
     }
 
     if (!reasonVal || reasonVal.length < 3) {
-      toast.error('Reason must be at least 3 characters');
+      formErrors.setFieldErrors({ reason: 'Reason must be at least 3 characters' });
       return;
     }
 
@@ -200,6 +202,7 @@ export function RatesPage({ staff }: { staff: StaffMe }) {
           hotelCurrency={hotelCurrency || rateCoverage?.currency || rate?.currency || null}
           canEditRates={canEditRates}
           busy={busy}
+          getError={formErrors.getError}
           onSaveRate={handleSaveRate}
         />
       )}

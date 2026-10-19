@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { Hotel, StaffMe } from '../../api';
-import { PageHeading, Alert } from '../../components/ui';
+import { PageHeading, Alert, Button } from '../../components/ui';
 import { RoomTypeForm } from '../../features/rooms/RoomTypeForm';
 import { HotelRoomPicker } from './components/HotelRoomPicker';
 import { readId } from '../../utils/helpers';
@@ -34,6 +35,14 @@ export function RoomTypeCreatePage({ staff: _staff }: { staff: StaffMe }) {
           title="Add room type"
           description="Define a new sellable room category and guest occupancy terms."
         />
+        <Button
+          variant="outline"
+          size="sm"
+          leftIcon={<ArrowLeft size={15} />}
+          onClick={handleBack}
+        >
+          Back to room types
+        </Button>
       </div>
 
       <HotelRoomPicker

@@ -20,13 +20,11 @@ export function HotelCreatePage({ staff: _staff }: { staff: StaffMe }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageHeading
-          eyebrow="PROPERTY SETUP"
-          title="Add a hotel"
-          description="Create a new property draft to configure capacity, rates, and policies."
-        />
-      </div>
+      <PageHeading
+        eyebrow="NEW HOTEL"
+        title="Add a hotel"
+        description="Fill in the basics. Rooms, prices and the cancellation policy come next."
+      />
 
       <HotelCreateForm onSuccess={handleCreated} onCancel={handleCancel} />
     </div>

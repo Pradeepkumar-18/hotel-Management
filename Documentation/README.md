@@ -99,6 +99,7 @@ The original file numbers (`00`–`27`) are kept, so references like "doc 08" st
 |---|---|
 | `QUICKSTART.md` | Local setup and super-admin bootstrap |
 | `27-admin-web-end-to-end-navigation-guide.md` | Admin web routes, RBAC matrix, user journeys, known problems |
+| `28-platform-modules-features-and-configuration-guide.md` | Comprehensive modules, features, pricing/cancellation rules, and end-to-end setup guide |
 
 ### `modules/` — detailed module specs
 See [`modules/README.md`](./modules/README.md). It covers authentication, RBAC, staff, guest accounts, hotels, room types, availability/booking, pricing/tax, search, booking lifecycle, payments/refunds, cancellation, reviews, notifications, media, reports, audit, deployment and the admin UI kit.
@@ -111,6 +112,7 @@ See [`modules/README.md`](./modules/README.md). It covers authentication, RBAC, 
 | `../context.md` | Agent context: product, invariants, phases and gates |
 | `../apps/admin-web/docs/` | ui-architect project memory: `ui-decisions.md`, `components.md` |
 | `../.agent/skills/ui-architect/` | The UI skill the agent uses for frontend work |
+| `../.agent/README.md` | Antigravity multi-agent orchestration: roles, workflows (`/implement-task`, `/quick-fix`), handoff files |
 
 ## Source of truth
 

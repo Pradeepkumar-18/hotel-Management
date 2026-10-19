@@ -1,6 +1,9 @@
-import type { FormEvent } from 'react';
-import { DollarSign, Lock } from 'lucide-react';
-import { Button, Field, Input } from '../../../components/ui';
+import { useState, type FormEvent } from 'react';
+import { IndianRupee, Lock } from 'lucide-react';
+import { Button, Field, Input, MoneyInput, ReasonField, Select } from '../../../components/ui';
+import { DEFAULT_CURRENCY, formatMoney } from '../../../utils/money';
+
+const RATE_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'];
 
 interface BaseRateData {
   _id?: string;
@@ -17,6 +20,8 @@ interface BaseRatesViewProps {
   hotelCurrency?: string | null;
   canEditRates: boolean;
   busy: boolean;
+  /** Field errors from the last save (e.g. amountMinorUnits, currency, reason). */
+  getError?: (field: string) => string | undefined;
   onSaveRate: (e: FormEvent<HTMLFormElement>) => void;
 }
 
@@ -28,10 +33,12 @@ export function BaseRatesView({
   hotelCurrency,
   canEditRates,
   busy,
+  getError = () => undefined,
   onSaveRate,
 }: BaseRatesViewProps) {
   const lockedCurrency = hotelCurrency || rate?.currency || null;
-  const currencyDefault = lockedCurrency || 'INR';
+  const [pickedCurrency, setCurrency] = useState(DEFAULT_CURRENCY);
+  const currency = lockedCurrency || pickedCurrency;
 
   return (
     <div
@@ -40,7 +47,7 @@ export function BaseRatesView({
     >
       <div className="rate-head flex items-center gap-3 pb-4 border-b border-slate-100">
         <span className="w-10 h-10 rounded-xl bg-amber-100/70 text-amber-700 flex items-center justify-center shrink-0">
-          <DollarSign size={20} />
+          <IndianRupee size={20} />
         </span>
         <div>
           <h2 className="text-base font-bold text-slate-900 tracking-tight">{selectedRoomName}</h2>
@@ -51,64 +58,48 @@ export function BaseRatesView({
       {rate && (
         <div className="current-rate p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-lg flex items-baseline gap-2 text-xs">
           <span className="text-amber-800 font-medium">Current rate:</span>
-          <strong className="text-base font-bold text-amber-950 font-mono">
-            {rate.currency} {Number(rate.amountMinorUnits).toLocaleString()}
+          <strong className="text-base font-bold text-amber-950">
+            {formatMoney(rate.amountMinorUnits, rate.currency)}
           </strong>
-          <span className="text-amber-700 text-[11px]">minor units / night (before tax)</span>
+          <span className="text-amber-700 text-[11px]">per night, before tax</span>
         </div>
       )}
 
       <form onSubmit={onSaveRate} className="rate-form grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Nightly amount (minor units)" required>
-          <Input
-            name="amount"
-            type="number"
-            step="1"
-            min="0"
+        <Field label="Price per night" required hint="Before tax, e.g. 2499 or 2499.50" error={getError('amountMinorUnits')}>
+          <MoneyInput
+            name="amountMinorUnits"
+            currency={currency}
+            defaultMinorUnits={rate?.amountMinorUnits}
             required
-            defaultValue={rate?.amountMinorUnits ?? ''}
-            placeholder="e.g. 15000 for 150.00"
+            key={currency}
           />
         </Field>
-        <Field label="Currency code" required>
-          <div className="relative">
-            <Input
-              name="currency"
-              required
-              pattern="[A-Za-z]{3}"
-              maxLength={3}
-              defaultValue={currencyDefault}
-              value={lockedCurrency ? currencyDefault : undefined}
-              readOnly={Boolean(lockedCurrency)}
-              placeholder="ISO 4217 (e.g. INR)"
-              className={`uppercase font-mono ${
-                lockedCurrency ? 'bg-slate-50 text-slate-600 cursor-not-allowed pr-8' : ''
-              }`}
-            />
-            {lockedCurrency && (
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" title={`Locked to property rate currency (${lockedCurrency})`}>
-                <Lock size={13} />
-              </span>
-            )}
-          </div>
+        <Field
+          label="Currency"
+          required
+          hint={lockedCurrency ? 'Same for every room at this hotel' : 'Choose once; all rooms at this hotel will use it'}
+        >
           {lockedCurrency ? (
-            <small className="text-[11px] text-slate-400 block mt-1">
-              Locked to property rate currency ({lockedCurrency}).
-            </small>
+            <>
+              <Input value={lockedCurrency} readOnly rightIcon={<Lock size={13} />} className="font-mono cursor-not-allowed" />
+              <input type="hidden" name="currency" value={lockedCurrency} />
+            </>
           ) : (
-            <small className="text-[11px] text-slate-400 block mt-1">
-              Editable for first rate setup (defaults to INR).
-            </small>
+            <Select name="currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              {RATE_CURRENCIES.map((code) => (
+                <option key={code} value={code}>{code}</option>
+              ))}
+            </Select>
           )}
         </Field>
-        <Field label="Reason for change" fullWidth required>
-          <Input
-            name="reason"
-            required
-            minLength={3}
-            placeholder="Initial rate setup"
-          />
-        </Field>
+        <ReasonField
+          name="reason"
+          label="Reason for change"
+          required
+          placeholder="e.g. Initial rate setup, festive season pricing"
+          error={getError('reason')}
+        />
         <div className="col-span-full pt-2">
           <Button
             type="submit"

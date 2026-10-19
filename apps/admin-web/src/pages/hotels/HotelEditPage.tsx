@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { Hotel, StaffMe } from '../../api';
 import { PageHeading, Button, Alert, Loader } from '../../components/ui';
 import { HotelWorkspace } from '../../features/hotels/HotelWorkspace';
@@ -35,8 +36,8 @@ export function HotelEditPage({ staff }: { staff: StaffMe }) {
   if (error || !hotel) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={handleBack}>
-          Cancel
+        <Button variant="outline" size="sm" leftIcon={<ArrowLeft size={14} />} onClick={handleBack}>
+          Back to hotels
         </Button>
         <Alert tone="error">
           {error instanceof Error ? error.message : String(error || 'Could not load hotel information.')}
@@ -47,13 +48,16 @@ export function HotelEditPage({ staff }: { staff: StaffMe }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageHeading
-          eyebrow="PROPERTY WORKSPACE"
-          title={`Edit Property: ${hotel.name}`}
-          description={`${hotel.address?.city || ''} · ${hotel.timezone} · Configure details, photo gallery, room categories, and policies.`}
-        />
-      </div>
+      <PageHeading
+        eyebrow="EDIT HOTEL"
+        title={hotel.name}
+        description={[hotel.address?.city, hotel.timezone].filter(Boolean).join(' · ')}
+        action={
+          <Button variant="outline" size="sm" leftIcon={<ArrowLeft size={14} />} onClick={handleBack}>
+            Back to hotels
+          </Button>
+        }
+      />
 
       <HotelWorkspace
         hotel={hotel}

@@ -58,13 +58,21 @@ export function RoomTypeEditPage({ staff: _staff }: { staff: StaffMe }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-1">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <PageHeading
           eyebrow="ROOM CATALOG"
           title={`Edit Room Type: ${room.name}`}
           description={`Room code: ${room.code} · ${room.totalRooms} sellable rooms.`}
         />
+        <Button
+          variant="outline"
+          size="sm"
+          leftIcon={<ArrowLeft size={15} />}
+          onClick={handleBack}
+        >
+          Back to room types
+        </Button>
       </div>
 
       <RoomTypeForm

@@ -6,7 +6,7 @@ Resolve nightly rate, quantity, occupancy surcharge if configured, taxes, fees, 
 
 ## Data and amount conventions
 
-Use integer minor units and ISO currency on every monetary record. Rate rules include roomTypeId, date/effective interval, amount, currency, priority, status, restrictions, createdBy, version. Tax configuration includes jurisdiction, effective dates, rate/slab, inclusive/exclusive mode, taxable basis, rounding policy, and source/reference. Tax rules require launch-market finance/legal approval.
+Use integer minor units and ISO currency on every monetary record. Admin UI input: staff type amounts in major units (e.g. ₹2,499.50); the shared `MoneyInput` / `utils/money.ts` converts exactly to minor units (249950) using the currency's decimal places, rejects extra decimals and negatives, and the server remains the authority that validates the integer. Rate rules include roomTypeId, date/effective interval, amount, currency, priority, status, restrictions, createdBy, version. Tax configuration includes jurisdiction, effective dates, rate/slab, inclusive/exclusive mode, taxable basis, rounding policy, and source/reference. Tax rules require launch-market finance/legal approval.
 
 ## Rate resolution
 

@@ -14,6 +14,12 @@ import {
 import { HotelMediaItem, uploadHotelMediaFile } from '../../api';
 import { resolveImageUrl } from '../../utils/helpers';
 import { useToast } from '../../ui-feedback';
+import { Button, Checkbox, Field, Input } from '../../components/ui';
+
+// Same rules as the API (media-management.md): JPEG/PNG/WebP uploads, https links, 200-char captions.
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const IMAGE_URL_RE = /^(https:\/\/\S+|\/uploads\/[A-Za-z0-9._-]+)$/;
+const CAPTION_MAX = 200;
 
 export interface HotelMediaGalleryManagerProps {
   media: HotelMediaItem[];
@@ -53,8 +59,8 @@ export function HotelMediaGalleryManager({
     const validFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      if (!f.type.startsWith('image/')) {
-        toast.error(`"${f.name}" is not a supported image file.`);
+      if (!ALLOWED_IMAGE_TYPES.includes(f.type)) {
+        toast.error(`"${f.name}" is not a JPEG, PNG or WebP image.`);
         continue;
       }
       if (f.size > 10 * 1024 * 1024) {
@@ -142,18 +148,8 @@ export function HotelMediaGalleryManager({
       setUrlError('Please enter an image URL.');
       return;
     }
-    let isValid = false;
-    try {
-      new URL(trimmed);
-      isValid = true;
-    } catch {
-      if (trimmed.startsWith('/uploads/') || trimmed.startsWith('/')) {
-        isValid = true;
-      }
-    }
-
-    if (!isValid) {
-      setUrlError('Please enter a valid HTTP/HTTPS image URL.');
+    if (!IMAGE_URL_RE.test(trimmed)) {
+      setUrlError('Enter a secure image link starting with https://');
       return;
     }
 
@@ -307,7 +303,7 @@ export function HotelMediaGalleryManager({
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+              accept={ALLOWED_IMAGE_TYPES.join(',')}
               className="hidden"
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0) {
@@ -336,7 +332,7 @@ export function HotelMediaGalleryManager({
                     Drag and drop photos here, or <span className="text-brand-primary underline underline-offset-2">browse files</span>
                   </span>
                   <span className="text-xs text-slate-500 block mt-1">
-                    Select one or multiple photos simultaneously • Supports PNG, JPG, WebP, AVIF up to 10MB per file
+                    Select one or multiple photos simultaneously • JPEG, PNG or WebP, up to 10 MB each
                   </span>
                 </div>
                 <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-2xs">
@@ -352,21 +348,19 @@ export function HotelMediaGalleryManager({
         {activeMode === 'url' && (
           <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-xl space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-              <div className="sm:col-span-2 space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Image URL <span className="text-rose-500">*</span>
-                </label>
-                <input
+              <Field label="Image URL" required className="sm:col-span-2" error={urlError || undefined}>
+                <Input
                   type="url"
+                  inputMode="url"
+                  maxLength={1000}
                   placeholder="https://images.unsplash.com/photo-1566073771259-6a8506099945"
                   value={urlInput}
                   onChange={(e) => {
                     setUrlInput(e.target.value);
                     if (urlError) setUrlError('');
                   }}
-                  className={`w-full px-3 py-2 text-xs bg-white rounded-lg border outline-none font-mono ${
-                    urlError ? 'border-rose-500' : 'border-slate-300 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary'
-                  }`}
+                  className="font-mono"
+                  isError={Boolean(urlError)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -374,18 +368,14 @@ export function HotelMediaGalleryManager({
                     }
                   }}
                 />
-              </div>
+              </Field>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Photo Caption / Description
-                </label>
-                <input
-                  type="text"
+              <Field label="Caption">
+                <Input
+                  maxLength={CAPTION_MAX}
                   placeholder="e.g. Deluxe Ocean View Suite"
                   value={captionInput}
                   onChange={(e) => setCaptionInput(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-white rounded-lg border border-slate-300 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -393,31 +383,19 @@ export function HotelMediaGalleryManager({
                     }
                   }}
                 />
-              </div>
+              </Field>
             </div>
 
-            {urlError && <p className="text-xs text-rose-600 font-semibold">{urlError}</p>}
-
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-              <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={setAsPrimaryOnAdd}
-                  onChange={(e) => setSetAsPrimaryOnAdd(e.target.checked)}
-                  className="rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
-                />
-                <span>Set as primary cover thumbnail immediately</span>
-              </label>
+              <Checkbox
+                checked={setAsPrimaryOnAdd}
+                onChange={(e) => setSetAsPrimaryOnAdd(e.target.checked)}
+                label="Use as the cover photo"
+              />
 
-              <button
-                type="button"
-                onClick={handleAddViaUrl}
-                disabled={!urlInput.trim()}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-lg shadow-xs hover:bg-[#123e32] transition-colors disabled:opacity-40 cursor-pointer"
-              >
-                <Check size={14} />
-                <span>Add Photo to Gallery</span>
-              </button>
+              <Button type="button" variant="primary" size="sm" onClick={handleAddViaUrl} disabled={!urlInput.trim()} leftIcon={<Check size={14} />}>
+                Add photo
+              </Button>
             </div>
           </div>
         )}
@@ -497,13 +475,14 @@ export function HotelMediaGalleryManager({
                       <span>Photo Description / Caption</span>
                       <span className="text-[10px] font-normal text-slate-400">Catalog caption</span>
                     </label>
-                    <input
-                      type="text"
+                    <Input
+                      size="sm"
                       disabled={disabled}
+                      maxLength={CAPTION_MAX}
+                      aria-label={`Caption for photo ${idx + 1}`}
                       value={item.caption || ''}
                       onChange={(e) => updateCaption(idx, e.target.value)}
                       placeholder="e.g. Deluxe Suite oceanfront balcony"
-                      className="w-full text-xs px-2.5 py-2 rounded-lg border border-slate-300 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-colors"
                     />
                   </div>
 

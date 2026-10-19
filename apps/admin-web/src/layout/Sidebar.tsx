@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Compass, Settings } from 'lucide-react';
+import { ChevronDown, CircleHelp, Compass, Settings } from 'lucide-react';
 import { StaffMe } from '../api';
 import { dashboardNav, navGroups } from '../routes/route-config';
 
@@ -9,7 +9,7 @@ interface SidebarProps {
   mobileNav: boolean;
   setMobileNav: (open: boolean) => void;
   sidebarCollapsed: boolean;
-  setSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  setSidebarCollapsed?: React.Dispatch<React.SetStateAction<boolean>>;
   collapsedGroups: Record<string, boolean>;
   setCollapsedGroups: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }
@@ -19,7 +19,6 @@ export function Sidebar({
   mobileNav,
   setMobileNav,
   sidebarCollapsed,
-  setSidebarCollapsed,
   collapsedGroups,
   setCollapsedGroups,
 }: SidebarProps) {
@@ -31,7 +30,11 @@ export function Sidebar({
         } ${mobileNav ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
         {/* Header Logo */}
-        <div className="flex items-center justify-between pb-3.5 mb-2.5 border-b border-slate-100 shrink-0">
+        <div
+          className={`flex items-center ${
+            sidebarCollapsed ? 'justify-center' : 'justify-start'
+          } pb-3.5 mb-2.5 border-b border-slate-100 shrink-0`}
+        >
           <Link
             className="flex items-center gap-3 font-bold text-slate-900 tracking-tight hover:opacity-90 transition-opacity"
             to="/admin/dashboard"
@@ -47,16 +50,6 @@ export function Sidebar({
               </span>
             )}
           </Link>
-          <button
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-slate-200/60 transition-colors cursor-pointer"
-            type="button"
-            onClick={() => setSidebarCollapsed((value) => !value)}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-expanded={!sidebarCollapsed}
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {sidebarCollapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
-          </button>
         </div>
 
         {/* Navigation Items */}

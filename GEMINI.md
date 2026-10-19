@@ -12,3 +12,8 @@
 - Technology baseline: NestJS REST API (`/api/v1`), TypeScript, MongoDB with Mongoose and replica-set multi-document transactions, React, Tailwind CSS.
 - Server authority: Availability, pricing (in integer minor units), payment, and authorization must remain strictly server-side.
 - State machines: Keep hold, booking, payment, and refund statuses strictly decoupled.
+
+## Agent Orchestration (Antigravity)
+- For any feature or behaviour change run `/implement-task`; for small contained bug fixes run `/quick-fix` (workflows in `.agent/workflows/`).
+- Specialist roles live in `.agent/roles/` (task-planner, backend-dev, frontend-dev, verifier, domain-reviewer, docs-keeper); handoffs go through `.agent/work/<task-id>/`.
+- Never skip the docs-keeper stage. Overview: `.agent/README.md`.

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { CalendarDays, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { Hotel, RoomType, InventoryDay, StaffMe } from '../../api';
-import { PageHeading, MetricCard, Alert, Field, Input } from '../../components/ui';
-import { readId, plusDays } from '../../utils/helpers';
+import { PageHeading, MetricCard, Alert, Field, DatePicker } from '../../components/ui';
+import { readId, plusDays, isoToday } from '../../utils/helpers';
 import { useToast, useBusyGuard } from '../../ui-feedback';
 import { useApiQuery, invalidate } from '../../hooks/useApiQuery';
 import { getInventoryRange, initializeInventory } from '../../features/inventory/inventory.api';
@@ -109,10 +109,11 @@ export function InventoryPage({ staff }: { staff: StaffMe }) {
         }}
         extraFilters={
           <Field label="First stay date" className="sm:w-44">
-            <Input
-              type="date"
+            <DatePicker
+              aria-label="First stay date"
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={setFrom}
+              today={selectedHotel ? isoToday(selectedHotel.timezone) : undefined}
             />
           </Field>
         }

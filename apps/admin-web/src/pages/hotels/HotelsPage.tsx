@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, ExternalLink, MapPin, Plus, Upload } from 'lucide-react';
 import { Hotel, StaffMe, bulkUpdateHotelStatus, fetchHotelMetrics, HotelMetrics, isApiError } from '../../api';
 import { useToast } from '../../ui-feedback';
-import { Button, DataTable, Column, Status } from '../../components/ui';
+import { Button, Checkbox, DataTable, Column, Status } from '../../components/ui';
 import { readId } from '../../utils/helpers';
 import { HotelSummaryCards } from './components/HotelSummaryCards';
 import { HotelBulkActionsBar } from './components/HotelBulkActionsBar';
@@ -11,8 +11,26 @@ import { HotelFiltersBar } from './components/HotelFiltersBar';
 import { BulkStatusConfirmModal } from './components/BulkStatusConfirmModal';
 import { useApiQuery, invalidate } from '../../hooks/useApiQuery';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { HotelStatus } from '../../features/hotels/hotel-status';
-import { listHotels, HotelList } from '../../features/hotels/hotels.api';
+import { HotelStatus, STATUS_LABEL } from '../../features/hotels/hotel-status';
+import { listHotels, listHotelCities, HotelList } from '../../features/hotels/hotels.api';
+
+const PAGE_SIZES = [10, 25, 50];
+/** Unknown values in the URL fall back to the defaults instead of reaching the API. */
+const readStatus = (v: string | null) => (v && v in STATUS_LABEL ? v : 'ALL');
+const readPageSize = (v: string | null) => {
+  const n = parseInt(v || '', 10);
+  return PAGE_SIZES.includes(n) ? n : 10;
+};
+
+/** "Updated" filter → start of today / this week (Monday) / this month, as an ISO timestamp. */
+function updatedSinceFor(filter: string): string | undefined {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  if (filter === 'THIS_WEEK') d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  else if (filter === 'THIS_MONTH') d.setDate(1);
+  else if (filter !== 'TODAY') return undefined;
+  return d.toISOString();
+}
 import { Can } from '../../features/auth/Can';
 import { AccessPage } from '../error/AccessPage';
 
@@ -24,14 +42,14 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
   // Filters & Search State initialized from URL params
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
-  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || 'ALL');
+  const [statusFilter, setStatusFilter] = useState(() => readStatus(searchParams.get('status')));
   const [locationFilter, setLocationFilter] = useState(() => searchParams.get('city') || 'ALL');
   const [setupFilter, setSetupFilter] = useState('ALL');
   const [timeFilter, setTimeFilter] = useState('ALL');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Pagination State initialized from URL params
-  const [pageSize, setPageSize] = useState(() => Math.max(1, parseInt(searchParams.get('pageSize') || '10', 10) || 10));
+  const [pageSize, setPageSize] = useState(() => readPageSize(searchParams.get('pageSize')));
   const [currentPage, setCurrentPage] = useState(() => Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1));
 
   // Bulk status modal state
@@ -41,7 +59,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, locationFilter, setupFilter]);
+  }, [debouncedSearch, statusFilter, locationFilter, setupFilter, timeFilter]);
 
   // Sync state to URL search parameters
   useEffect(() => {
@@ -70,13 +88,13 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
   useEffect(() => {
     const s = searchParams.get('search') || '';
     if (s !== searchQuery) setSearchQuery(s);
-    const st = searchParams.get('status') || 'ALL';
+    const st = readStatus(searchParams.get('status'));
     if (st !== statusFilter) setStatusFilter(st);
     const c = searchParams.get('city') || 'ALL';
     if (c !== locationFilter) setLocationFilter(c);
     const p = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1);
     if (p !== currentPage) setCurrentPage(p);
-    const ps = Math.max(1, parseInt(searchParams.get('pageSize') || '10', 10) || 10);
+    const ps = readPageSize(searchParams.get('pageSize'));
     if (ps !== pageSize) setPageSize(ps);
   }, [searchParams]);
 
@@ -90,11 +108,12 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
           city: locationFilter,
           setupStatus: setupFilter,
           search: debouncedSearch,
+          updatedSince: updatedSinceFor(timeFilter),
         },
         signal,
       );
     },
-    [pageSize, currentPage, statusFilter, locationFilter, debouncedSearch, setupFilter],
+    [pageSize, currentPage, statusFilter, locationFilter, debouncedSearch, setupFilter, timeFilter],
     { tags: ['hotels'] },
   );
 
@@ -141,13 +160,9 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     return defaultCounts;
   }, [paginatedHotels, metricsQuery.data]);
 
-  const uniqueLocations = useMemo(() => {
-    const cities = new Set<string>();
-    paginatedHotels.forEach((h) => {
-      if (h.address?.city) cities.add(h.address.city);
-    });
-    return Array.from(cities).sort();
-  }, [paginatedHotels]);
+  // All cities in scope (not just the current page), so the list doesn't shrink after picking one.
+  const citiesQuery = useApiQuery<string[]>((signal) => listHotelCities(signal), [], { tags: ['hotels'] });
+  const uniqueLocations = citiesQuery.data ?? [];
 
   const canCreate = staff.permissions.includes('hotels.create');
 
@@ -206,19 +221,16 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     {
       key: 'checkbox',
       header: (
-        <input
-          type="checkbox"
-          className="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700 cursor-pointer"
+        <Checkbox
           checked={selectedIds.size === paginatedHotels.length && paginatedHotels.length > 0}
+          indeterminate={selectedIds.size > 0 && selectedIds.size < paginatedHotels.length}
           onChange={toggleSelectAll}
           aria-label="Select all hotels"
         />
       ),
       cell: (h) => (
         <div onClick={(e) => e.stopPropagation()}>
-          <input
-            type="checkbox"
-            className="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700 cursor-pointer"
+          <Checkbox
             checked={selectedIds.has(readId(h))}
             onChange={() => toggleSelectRow(readId(h))}
             aria-label={`Select ${h.name}`}
@@ -385,7 +397,10 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
       </div>
 
       {/* KPI Cards Strip matching screenshot */}
-      <HotelSummaryCards total={data?.total ?? 0} statusCounts={statusCounts} />
+      <HotelSummaryCards
+        total={statusCounts.PUBLISHED + statusCounts.DRAFT + statusCounts.SUSPENDED}
+        statusCounts={statusCounts}
+      />
 
       {/* Bulk actions banner if selected */}
       <HotelBulkActionsBar

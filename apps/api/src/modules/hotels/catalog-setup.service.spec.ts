@@ -70,13 +70,28 @@ describe('Sprint 1 catalog setup acceptance', () => {
 
   it('enforces publication gates for explicit policy, base rate, and future inventory', async () => {
     const noPolicy = await setupHotel({ policy: false });
-    await expect(hotels.publish(noPolicy.hotel.id, 0, actor)).rejects.toMatchObject({ response: expect.objectContaining({ error: 'HOTEL_CANCELLATION_POLICY_REQUIRED' }) });
+    await expect(hotels.publish(noPolicy.hotel.id, 0, actor)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        error: 'HOTEL_NOT_READY',
+        details: expect.arrayContaining([expect.objectContaining({ code: 'HOTEL_CANCELLATION_POLICY_REQUIRED' })]),
+      }),
+    });
 
     const noRate = await setupHotel({ rate: false });
-    await expect(hotels.publish(noRate.hotel.id, 0, actor)).rejects.toMatchObject({ response: expect.objectContaining({ error: 'HOTEL_BASE_RATES_REQUIRED' }) });
+    await expect(hotels.publish(noRate.hotel.id, 0, actor)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        error: 'HOTEL_NOT_READY',
+        details: expect.arrayContaining([expect.objectContaining({ code: 'HOTEL_BASE_RATES_REQUIRED' })]),
+      }),
+    });
 
     const noInventory = await setupHotel({ inventory: false });
-    await expect(hotels.publish(noInventory.hotel.id, 0, actor)).rejects.toMatchObject({ response: expect.objectContaining({ error: 'HOTEL_FUTURE_INVENTORY_REQUIRED' }) });
+    await expect(hotels.publish(noInventory.hotel.id, 0, actor)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        error: 'HOTEL_NOT_READY',
+        details: expect.arrayContaining([expect.objectContaining({ code: 'HOTEL_FUTURE_INVENTORY_REQUIRED' })]),
+      }),
+    });
 
     const ready = await setupHotel();
     const published = await hotels.publish(ready.hotel.id, 0, actor);

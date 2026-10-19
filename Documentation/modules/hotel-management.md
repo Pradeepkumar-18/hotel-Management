@@ -17,6 +17,10 @@ Required: stable ID, unique slug, display name, address, city, country, IANA tim
 - Super admin can operate globally; manager actions require hotel scope and permission.
 - Publication is gated on an explicit effective cancellation/no-show policy, at least one active room type with positive sellable capacity, a base rate per active room type with one shared currency, and at least one future available inventory night per active room type. Fixed policy fees must match that currency.
 
+## Admin UI
+
+`/admin/hotels/new` (create draft) and `/admin/hotels/:id/edit` (workspace with Details, Photos, Rooms, Cancellation policy tabs) share one fields block for identity, contact and location. Fixed cancellation/no-show fees are typed in rupees and sent as minor units in the policy currency (saved currency, else INR). The admin hotel list (and the hotel pickers that use it) hides archived hotels unless the Archived status filter is chosen. Archived hotels open read-only in the workspace (UI only; a server-side guard is a separate task).
+
 ## APIs
 
 Public `GET /api/v1/hotels/:slug`; admin `GET/POST /api/v1/admin/hotels`, `GET/PATCH /admin/hotels/:id`, `POST /admin/hotels/:id/publish`, `POST /admin/hotels/:id/suspend`, `POST /admin/hotels/:id/archive`. Mutations use DTO validation and optimistic version checks for concurrent admin edits.

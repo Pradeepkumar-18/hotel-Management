@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Archive, Check, PauseCircle } from 'lucide-react';
-import { Modal, Button, Textarea, Input } from '../../../components/ui';
+import { Modal, Button, Input, ReasonField, REASON_MIN } from '../../../components/ui';
 import { HotelStatus, STATUS_LABEL } from '../../../features/hotels/hotel-status';
 
 interface BulkStatusConfirmModalProps {
@@ -26,12 +26,15 @@ export function BulkStatusConfirmModal({
   if (!isOpen || !status) return null;
 
   const isArchive = status === 'ARCHIVED';
-  const canSubmit = !isArchive || archiveConfirmation.trim() === 'ARCHIVE';
+  // Taking a hotel offline must say why; publishing may leave it blank.
+  const reasonRequired = status === 'SUSPENDED' || isArchive;
+  const reasonOk = !reasonRequired || reason.trim().length >= REASON_MIN;
+  const canSubmit = reasonOk && (!isArchive || archiveConfirmation.trim() === 'ARCHIVE');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    await onConfirm(reason.trim() || `Bulk ${status} operation`);
+    await onConfirm(reason.trim());
     setReason('');
     setArchiveConfirmation('');
   };
@@ -52,7 +55,7 @@ export function BulkStatusConfirmModal({
   return (
     <Modal
       onClose={loading ? () => {} : onClose}
-      title={`Confirm Bulk ${STATUS_LABEL[status]}`}
+      title={count === 1 ? `${STATUS_LABEL[status]} hotel` : `${STATUS_LABEL[status]} ${count} hotels`}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
@@ -94,18 +97,16 @@ export function BulkStatusConfirmModal({
           </div>
         )}
 
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Reason for status change (optional audit note)
-          </label>
-          <Textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g., Seasonal closure, maintenance, regulatory compliance..."
-            rows={3}
-            disabled={loading}
-          />
-        </div>
+        <ReasonField
+          label="Reason"
+          required={reasonRequired}
+          hint={reasonRequired ? 'Saved in the audit history.' : 'Optional; saved in the audit history.'}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. Closed for renovation until March"
+          rows={3}
+          disabled={loading}
+        />
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
           <Button

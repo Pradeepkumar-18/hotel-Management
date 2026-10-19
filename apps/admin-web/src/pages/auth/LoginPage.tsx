@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Compass, ArrowRight } from 'lucide-react';
 import { isApiError, StaffMe } from '../../api';
 import { AsyncButton, useBusyGuard, useToast } from '../../ui-feedback';
-import { Alert, Field } from '../../components/ui';
+import { Alert, Field, Input, PasswordInput } from '../../components/ui';
 import { loginStaff, getStaffMe } from '../../features/auth/auth.api';
 import { homePath } from '../../routes/route-config';
 
@@ -102,26 +102,27 @@ export function LoginPage({ onLogin, apiError }: { onLogin: (user: StaffMe) => v
           )}
 
           <Field label="Work email">
-            <input
+            <Input
+              size="lg"
               autoComplete="username"
               type="email"
               required
+              maxLength={254}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@hotel.com"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-all font-medium"
             />
           </Field>
 
           <Field label="Password">
-            <input
+            <PasswordInput
+              size="lg"
               autoComplete="current-password"
-              type="password"
               required
+              maxLength={128}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••••••"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition-all font-medium"
             />
           </Field>
 

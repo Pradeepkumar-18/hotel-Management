@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Lock, Unlock, AlertCircle } from 'lucide-react';
-import { Modal, Button, Input, Textarea } from '../../../components/ui';
+import { Modal, Button, Input, ReasonField } from '../../../components/ui';
 import { InventoryDay, isApiError } from '../../../api';
 import { adjustNight } from '../../../features/inventory/inventory.api';
 import { useToast } from '../../../ui-feedback';
@@ -186,11 +186,9 @@ export function InventoryAdjustModal({
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Reason for {action}ing rooms (required)
-          </label>
-          <Textarea
+        <ReasonField
+            label={`Reason for ${action}ing rooms`}
+            required
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={
@@ -200,9 +198,7 @@ export function InventoryAdjustModal({
             }
             rows={3}
             disabled={loading}
-            required
           />
-        </div>
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
           <Button

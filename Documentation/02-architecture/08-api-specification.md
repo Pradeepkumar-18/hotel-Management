@@ -24,7 +24,8 @@ Base path `/api/v1`. Publish OpenAPI in non-production and authorized internal e
 | POST | `/auth/staff/login` | Authenticate staff and set opaque session/CSRF cookies | **VERIFIED** |
 | GET | `/auth/me` | Return current staff identity, roles, permissions, and hotel scope | **VERIFIED** |
 | POST | `/auth/logout` / `/auth/logout-all` | Revoke current or all staff sessions | **VERIFIED** |
-| GET | `/admin/hotels` | List scoped hotel records with `search`, `status`, `city`, `setupStatus`, `limit`, `offset` | **VERIFIED** |
+| GET | `/admin/hotels` | List scoped hotel records with `search`, `status`, `city`, `setupStatus`, `limit`, `offset`. Without `status`, `ARCHIVED` hotels are excluded; `status=ARCHIVED` returns only archived. `setupStatus` (`COMPLETED`/`IN_PROGRESS`) is combined (AND) with the status condition. `updatedSince` (ISO date) returns hotels updated at or after that time. | **VERIFIED** |
+| GET | `/admin/hotels/cities` | Distinct cities of non-archived hotels in the staff member's scope (Location filter) | **VERIFIED** |
 | POST | `/admin/hotels` | Create a draft property | **VERIFIED** |
 | GET/PATCH | `/admin/hotels/:id` | Read or update a property with optimistic versioning | **VERIFIED** |
 | POST | `/admin/hotels/:id/publish` | Publish after policy, room, rate, and future inventory checks | **VERIFIED** |

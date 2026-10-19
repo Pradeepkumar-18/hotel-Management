@@ -79,7 +79,16 @@ export class RoomTypeService {
       update.code = changes.code.trim().toUpperCase();
       update.normalizedCode = changes.code.trim().toLowerCase();
     }
-    if (changes.description !== undefined) update.description = changes.description.trim() || undefined;
+    // An empty description clears the field.
+    const unset: Record<string, ''> = {};
+    if (changes.description !== undefined) {
+      if (changes.description.trim()) {
+        update.description = changes.description.trim();
+      } else {
+        delete update.description;
+        unset.description = '';
+      }
+    }
     if (changes.amenities) update.amenities = [...new Set(changes.amenities.map((item) => item.trim()).filter(Boolean))];
 
     return this.transactions.executeInTransaction(async (session) => {
@@ -88,7 +97,7 @@ export class RoomTypeService {
       }
       const after = await this.roomTypeModel.findOneAndUpdate(
         { _id: roomTypeId, version },
-        { $set: update, $inc: { version: 1 } },
+        { $set: update, ...(Object.keys(unset).length ? { $unset: unset } : {}), $inc: { version: 1 } },
         { new: true, runValidators: true, session },
       );
       if (!after) throw new ConflictException({ error: 'VERSION_CONFLICT', message: 'Room type was changed by another request' });

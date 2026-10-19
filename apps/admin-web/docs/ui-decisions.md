@@ -26,3 +26,15 @@
 
 ## 4. Modals & Dialogs
 - `<Modal>` supports `variant="drawer"` (full-height right-side slide-over) and `variant="dialog"` (centered card modal).
+
+## 5. Money
+- Staff never type or read raw minor units. Inputs use `MoneyInput` (major units, ₹ prefix); display uses `formatMoney(minor, currency)` (e.g. ₹2,499.00).
+- Conversion lives only in `utils/money.ts`; the API still receives integer minor units and the server validates them.
+- Default currency is INR; a currency already saved on a record is kept.
+
+## 6. Tabs
+- Page-level tabs use the shared `Tabs` component (e.g. hotel workspace); no hand-rolled tab buttons.
+
+## 7. Form controls (2026-10-19)
+- Dates use `DatePicker`, checkboxes use `Checkbox`, searchable/long lists use `Combobox`, passwords use `PasswordInput`, audit reasons use `ReasonField`. No native date/checkbox/select/file controls on screen.
+- Client limits mirror the API DTO (maxLength, patterns); the server stays the authority and returns per-field errors.

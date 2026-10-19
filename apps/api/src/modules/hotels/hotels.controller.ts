@@ -40,6 +40,13 @@ export class AdminHotelsController {
     return this.hotels.list(query, request.user);
   }
 
+  @Get('cities')
+  @RequirePermission('hotels.view')
+  @ApiOperation({ summary: 'Distinct cities of non-archived hotels in scope' })
+  cities(@Req() request: StaffRequest) {
+    return this.hotels.listCities(request.user);
+  }
+
   @Get('metrics')
   @RequirePermission('hotels.view')
   @ApiOperation({ summary: 'Get aggregated hotel count metrics by status' })
@@ -83,8 +90,9 @@ export class AdminHotelsController {
       }),
       limits: { fileSize: 10 * 1024 * 1024 },
       fileFilter: (req: any, file: any, cb: (error: Error | null, acceptFile: boolean) => void) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp|gif|avif)$/i)) {
-          return cb(new BadRequestException('Only JPG, PNG, WebP, GIF, and AVIF images are allowed'), false);
+        // media-management.md: JPEG, PNG and WebP only.
+        if (!/^image\/(jpeg|png|webp)$/i.test(file.mimetype)) {
+          return cb(new BadRequestException('Only JPEG, PNG and WebP images are allowed'), false);
         }
         cb(null, true);
       },

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut, Menu, PanelLeft, Search, ShieldAlert } from 'lucide-react';
 import { StaffMe } from '../api';
 import { useToast } from '../ui-feedback';
+import { Input } from '../components/ui';
 
 export function Topbar({
   staff,
@@ -36,7 +37,7 @@ export function Topbar({
 
   return (
     <header className="sticky top-0 z-20 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-6 md:px-8 shadow-2xs">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {/* Mobile Nav Toggle */}
         <button
           type="button"
@@ -51,7 +52,11 @@ export function Topbar({
         {setSidebarCollapsed && (
           <button
             type="button"
-            className="hidden md:inline-flex p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className={`hidden md:inline-flex items-center justify-center p-2 rounded-lg transition-colors cursor-pointer ${
+              sidebarCollapsed
+                ? 'text-brand-primary bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200/60 shadow-2xs'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-transparent'
+            }`}
             onClick={() => setSidebarCollapsed((v) => !v)}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -60,23 +65,18 @@ export function Topbar({
           </button>
         )}
 
-        {/* Search Input matching screenshot */}
-        <form
-          className="flex items-center gap-3 px-3.5 py-1.5 bg-slate-50/80 border border-slate-200/90 rounded-xl text-slate-400 w-64 sm:w-80 md:w-96 focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-600/15 transition-all shadow-2xs h-10"
-          role="search"
-          onSubmit={submitSearch}
-        >
-          <Search size={16} className="text-slate-400 shrink-0" />
-          <input
-            className="w-full bg-transparent border-none text-xs text-slate-800 placeholder-slate-400 focus:outline-none font-medium"
-            aria-label="Search hotels, bookings, guests"
-            placeholder="Search hotels, bookings, guests..."
+        {/* Search Input */}
+        <form className="w-64 sm:w-80 md:w-96" role="search" onSubmit={submitSearch}>
+          {/* Only hotels are searchable today; the placeholder says so. */}
+          <Input
+            type="search"
+            maxLength={100}
+            aria-label="Search hotels"
+            placeholder="Search hotels…"
+            leftIcon={<Search size={15} />}
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
-          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[11px] font-mono text-slate-400 bg-white border border-slate-200 rounded shadow-2xs">
-            ⌘ K
-          </kbd>
         </form>
       </div>
 
