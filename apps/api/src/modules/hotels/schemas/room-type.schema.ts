@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import { HotelMedia, HotelMediaSchema } from './hotel.schema';
 
 export type RoomTypeDocument = HydratedDocument<RoomType>;
 
@@ -49,6 +50,9 @@ export class RoomType {
 
   @Prop({ type: [String], default: [] })
   amenities: string[];
+
+  @Prop({ type: [HotelMediaSchema], default: [] })
+  media: HotelMedia[];
 
   @Prop({ required: true, min: 0, max: 10000 })
   totalRooms: number;

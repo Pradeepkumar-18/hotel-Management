@@ -31,6 +31,7 @@ export const routePermissions: Record<string, string> = {
   '/admin/dashboard': 'hotels.view',
   '/admin/hotels': 'hotels.view',
   '/admin/hotels/new': 'hotels.create',
+  '/admin/hotels/:id': 'hotels.view',
   '/admin/hotels/:id/edit': 'hotels.view',
   '/admin/room-types': 'room_types.view',
   '/admin/room-types/new': 'room_types.create',

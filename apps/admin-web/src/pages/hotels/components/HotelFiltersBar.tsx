@@ -47,7 +47,7 @@ export function HotelFiltersBar({
       </div>
 
       {/* Filter Dropdowns Grid */}
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2.5 w-full lg:w-auto">
         <div className="flex flex-col gap-0.5 min-w-[120px]">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</span>
           <Select size="sm" value={statusFilter} onChange={(e) => onStatusChange(e.target.value)}>
@@ -58,7 +58,7 @@ export function HotelFiltersBar({
           </Select>
         </div>
 
-        <div className="flex flex-col gap-0.5 min-w-[160px]">
+        <div className="flex flex-col gap-0.5 min-w-[140px] sm:min-w-[160px]">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Location</span>
           <Combobox
             size="sm"
@@ -89,13 +89,13 @@ export function HotelFiltersBar({
           </Select>
         </div>
 
-        <div className="self-end pt-3.5">
+        <div className="col-span-2 sm:col-span-1 self-end pt-1 sm:pt-3.5">
           <Button
             variant="outline"
             size="sm"
             leftIcon={<SlidersHorizontal size={14} />}
             onClick={onColumnsClick}
-            className="h-8"
+            className="h-8 w-full sm:w-auto justify-center"
           >
             Columns
           </Button>

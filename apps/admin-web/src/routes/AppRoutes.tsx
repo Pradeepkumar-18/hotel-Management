@@ -4,6 +4,7 @@ import { homePath } from './route-config';
 import { PermissionRoute } from './PermissionRoute';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
 import { HotelsPage } from '../pages/hotels/HotelsPage';
+import { HotelDetailPage } from '../pages/hotels/HotelDetailPage';
 import { HotelCreatePage } from '../pages/hotels/HotelCreatePage';
 import { HotelEditPage } from '../pages/hotels/HotelEditPage';
 import { RoomTypesPage } from '../pages/catalog/RoomTypesPage';
@@ -41,6 +42,14 @@ export function AppRoutes({ staff }: { staff: StaffMe }) {
         element={
           <PermissionRoute staff={staff} path="/admin/hotels/new">
             <HotelCreatePage staff={staff} />
+          </PermissionRoute>
+        }
+      />
+      <Route
+        path="/admin/hotels/:id"
+        element={
+          <PermissionRoute staff={staff} path="/admin/hotels/:id">
+            <HotelDetailPage staff={staff} />
           </PermissionRoute>
         }
       />

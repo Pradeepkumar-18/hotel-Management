@@ -79,6 +79,7 @@ export type RoomType = {
   version: number;
   status: string;
   description?: string;
+  media?: HotelMediaItem[];
 };
 export type InventoryDay = { stayDate: string; total: number; available: number; held: number; confirmed: number; blocked: number; version: number };
 

@@ -417,7 +417,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         rowKey={(h) => readId(h)}
         loading={loading}
         error={error}
-        onRowClick={(h) => handleOpenEdit(h)}
+        onRowClick={(h) => navigate(`/admin/hotels/${readId(h)}`)}
         selectedRowKeys={selectedIds}
         emptyTitle="No matching properties found"
         emptyCopy="Try adjusting your search keywords or filter dropdowns to view matching hotels."

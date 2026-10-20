@@ -43,6 +43,7 @@ export class RoomTypeService {
       maxChildren: dto.maxChildren ?? 0,
       beds: dto.beds || [],
       amenities: [...new Set((dto.amenities || []).map((item) => item.trim()).filter(Boolean))],
+      media: dto.media || [],
       status: RoomTypeStatus.ACTIVE,
       version: 0,
     };
@@ -155,8 +156,8 @@ function validateBeds(beds: CreateRoomTypeDto['beds']) {
 
 function safeRoomView(value: any) {
   if (!value) return undefined;
-  const { _id, hotelId, name, code, maxAdults, maxChildren, beds, totalRooms, status, version } = value;
-  return { id: _id?.toString(), hotelId: hotelId?.toString(), name, code, maxAdults, maxChildren, beds, totalRooms, status, version };
+  const { _id, hotelId, name, code, maxAdults, maxChildren, beds, totalRooms, media, status, version } = value;
+  return { id: _id?.toString(), hotelId: hotelId?.toString(), name, code, maxAdults, maxChildren, beds, totalRooms, media, status, version };
 }
 
 function mapDuplicate(error: any): never {
