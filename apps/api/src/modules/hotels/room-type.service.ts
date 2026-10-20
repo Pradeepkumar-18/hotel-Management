@@ -27,6 +27,30 @@ export class RoomTypeService {
     return this.roomTypeModel.find(filter).sort({ name: 1 }).lean();
   }
 
+  /**
+   * Room category names already used, for the name suggestions in the admin form.
+   * Only hotels the actor can access (all for super admins), skipping archived hotels and
+   * disabled room types. One entry per name (case-insensitive), most used first.
+   */
+  async listNames(actor: StaffPrincipal, search?: string): Promise<Array<{ name: string; hotelCount: number }>> {
+    const hotelFilter: Record<string, unknown> = { status: { $ne: HotelStatus.ARCHIVED } };
+    if (actor.role !== 'SUPER_ADMIN') hotelFilter._id = { $in: (actor.hotelIds || []).map((id) => asObjectId(id)) };
+    const hotelIds = await this.hotelModel.find(hotelFilter).distinct('_id');
+
+    const match: Record<string, unknown> = { hotelId: { $in: hotelIds }, status: RoomTypeStatus.ACTIVE };
+    const term = search?.trim();
+    if (term) match.name = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+    const rows = await this.roomTypeModel.aggregate<{ name: string; hotelCount: number }>([
+      { $match: match },
+      { $group: { _id: { $toLower: { $trim: { input: '$name' } } }, name: { $first: { $trim: { input: '$name' } } }, hotels: { $addToSet: '$hotelId' } } },
+      { $project: { _id: 0, name: 1, hotelCount: { $size: '$hotels' } } },
+      { $sort: { hotelCount: -1, name: 1 } },
+      { $limit: 20 },
+    ]);
+    return rows;
+  }
+
   async create(hotelId: string, dto: CreateRoomTypeDto, actor: StaffPrincipal) {
     const hotelObjectId = asObjectId(hotelId);
     const hotel = await this.hotelModel.findById(hotelObjectId).lean();

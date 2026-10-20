@@ -8,7 +8,7 @@
 
 ## Engineering Stack & Architectural Standards
 - Follow `AGENT.md`, `context.md`, and module specifications in `Documentation/`.
-- Documentation map: `Documentation/README.md`. Reading order: `Documentation/EXECUTION-ORDER.md`. How the docs are organised and used: `Documentation/DOCUMENTATION-REPORT.md`.
+- Documentation map: `Documentation/README.md`. Reading order: `Documentation/README.md#EXECUTION-ORDER`. How the docs are organised and used: `Documentation/README.md#DOCUMENTATION-REPORT`.
 - Technology baseline: NestJS REST API (`/api/v1`), TypeScript, MongoDB with Mongoose and replica-set multi-document transactions, React, Tailwind CSS.
 - Server authority: Availability, pricing (in integer minor units), payment, and authorization must remain strictly server-side.
 - State machines: Keep hold, booking, payment, and refund statuses strictly decoupled.

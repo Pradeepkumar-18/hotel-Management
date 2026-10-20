@@ -114,6 +114,13 @@ export class AdminHotelsController {
     return this.hotels.getById(id, request.user);
   }
 
+  @Get(':id/readiness')
+  @RequirePermission('hotels.view')
+  @ApiOperation({ summary: 'Publishing checklist: setup steps done and what is still missing' })
+  readiness(@Param('id') id: string, @Req() request: StaffRequest) {
+    return this.hotels.getReadiness(id, request.user);
+  }
+
   @Patch(':id')
   @RequirePermission('hotels.edit')
   update(@Param('id') id: string, @Body() dto: UpdateHotelDto, @Req() request: StaffRequest) {

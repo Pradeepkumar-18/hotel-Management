@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -14,6 +14,9 @@ export interface ModalProps {
   className?: string;
   closeOnBackdrop?: boolean;
 }
+
+/** Open modals, oldest first. */
+const openModals: symbol[] = [];
 
 const sizeClasses = {
   small: 'max-w-md',
@@ -34,13 +37,22 @@ export function Modal({
   className = '',
   closeOnBackdrop = true,
 }: ModalProps) {
+  // Escape closes only the top-most modal when one opens on top of another.
+  const idRef = useRef(Symbol('modal'));
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
+    const id = idRef.current;
+    openModals.push(id);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && openModals[openModals.length - 1] === id) onCloseRef.current();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      openModals.splice(openModals.indexOf(id), 1);
+    };
+  }, []);
 
   const widthClass = size ? sizeClasses[size] : wide ? 'max-w-3xl' : 'max-w-lg';
 

@@ -128,4 +128,51 @@ export class HotelPublishChecks {
 
     return problems;
   }
+
+  /**
+   * Setup progress for the admin checklist and hotel list, derived from the same
+   * rules as publishing so the UI can never disagree with the Publish button.
+   */
+  async readiness(hotel: HotelDocument | any, session?: ClientSession): Promise<HotelReadiness> {
+    const problems = await this.collect(hotel, session);
+    const hasRooms = !problems.some((p) => p.code === 'HOTEL_ACTIVE_ROOM_TYPES_REQUIRED');
+    const steps = SETUP_STEPS.map((key) => {
+      const stepProblems = problems.filter((p) => STEP_FOR_CODE[p.code] === key);
+      // Rate and availability checks only run once room types exist.
+      const blockedByRooms = (key === 'rates' || key === 'availability') && !hasRooms;
+      return { key, done: stepProblems.length === 0 && !blockedByRooms, problems: stepProblems };
+    });
+    return {
+      ready: problems.length === 0,
+      done: steps.filter((s) => s.done).length,
+      total: steps.length,
+      steps,
+      problems,
+    };
+  }
 }
+
+export type SetupStepKey = 'hotel' | 'rooms' | 'rates' | 'availability' | 'cancellation';
+
+export interface HotelReadiness {
+  ready: boolean;
+  done: number;
+  total: number;
+  steps: Array<{ key: SetupStepKey; done: boolean; problems: PublishProblem[] }>;
+  problems: PublishProblem[];
+}
+
+/** Hotel basics are required at creation, so the "hotel" step has no blocking codes. */
+const SETUP_STEPS: SetupStepKey[] = ['hotel', 'rooms', 'rates', 'availability', 'cancellation'];
+
+const STEP_FOR_CODE: Record<string, SetupStepKey> = {
+  HOTEL_ACTIVE_ROOM_TYPES_REQUIRED: 'rooms',
+  HOTEL_SELLABLE_INVENTORY_REQUIRED: 'rooms',
+  HOTEL_BASE_RATES_REQUIRED: 'rates',
+  HOTEL_RATE_CURRENCY_MISMATCH: 'rates',
+  HOTEL_FUTURE_INVENTORY_REQUIRED: 'availability',
+  HOTEL_CANCELLATION_POLICY_REQUIRED: 'cancellation',
+  HOTEL_CANCELLATION_POLICY_INVALID: 'cancellation',
+  HOTEL_POLICY_NOT_YET_EFFECTIVE: 'cancellation',
+  HOTEL_POLICY_CURRENCY_MISMATCH: 'cancellation',
+};

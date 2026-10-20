@@ -17,12 +17,14 @@ export interface TabsProps {
   activeId: string;
   onChange: (id: string) => void;
   variant?: 'underline' | 'pills';
+  /** 'sm' matches small inputs/selects (h-8), e.g. inside a filter bar. */
+  size?: 'sm' | 'md';
   rightContent?: ReactNode;
   className?: string;
 }
 
 export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(function Tabs(
-  { items, activeId, onChange, variant = 'underline', rightContent, className },
+  { items, activeId, onChange, variant = 'underline', size = 'md', rightContent, className },
   ref
 ) {
   return (
@@ -31,6 +33,7 @@ export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(function Tabs(
       className={cn(
         'flex items-center justify-between border-b border-slate-200 gap-4',
         variant === 'pills' && 'border-b-0 p-1 bg-slate-100/80 rounded-xl',
+        variant === 'pills' && size === 'sm' && 'p-0.5 rounded-lg',
         className
       )}
     >
@@ -56,7 +59,8 @@ export const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(function Tabs(
                 }
               }}
               className={cn(
-                'group relative inline-flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-lg transition-all cursor-pointer select-none',
+                'group relative inline-flex items-center gap-2 text-xs font-semibold rounded-lg transition-all cursor-pointer select-none',
+                size === 'sm' ? 'h-7 px-2.5 rounded-md' : 'px-3.5 py-2.5',
                 variant === 'underline' && [
                   'rounded-b-none border-b-2 font-medium',
                   isActive

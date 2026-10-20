@@ -1,25 +1,16 @@
 import { useState, useEffect, useCallback, type FormEvent, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  Check,
-  Archive,
-  Plus,
-  PauseCircle,
-  Image as ImageIcon,
-  Lock,
-  CheckCircle2,
-  Sparkles,
-} from 'lucide-react';
-import { Hotel, RoomType, PublishProblem, StaffMe, HotelMediaItem, updateHotelMedia } from '../../api';
+import { Check, Archive, Plus, PauseCircle, Image as ImageIcon, Lock } from 'lucide-react';
+import { Hotel, RoomType, StaffMe, HotelMediaItem, updateHotelMedia } from '../../api';
 import { useBusyGuard, useToast } from '../../ui-feedback';
-import { Alert, Button, Modal, Status } from '../../components/ui';
+import { Alert, Button, ConfirmDialog, Modal, Status } from '../../components/ui';
 import { readId } from '../../utils/helpers';
 import { RoomCreateModal } from '../rooms/RoomCreateModal';
 import { RoomMediaModal } from '../rooms/RoomMediaModal';
 import { useServerErrors } from '../../hooks/useServerErrors';
 import { handleFormError } from '../../hooks/handleFormError';
 import { Can } from '../auth/Can';
-import { publishHotel, suspendHotel, archiveHotel, updateHotel } from './hotels.api';
+import { publishHotel, suspendHotel, archiveHotel, updateHotel, getHotelReadiness, HotelReadiness } from './hotels.api';
 import { listRoomTypes } from '../rooms/rooms.api';
 import { BulkStatusConfirmModal } from '../../pages/hotels/components/BulkStatusConfirmModal';
 import { HotelMediaGalleryManager } from './HotelMediaGalleryManager';
@@ -27,14 +18,14 @@ import { HotelDetailsFields, readHotelDetails } from './HotelDetailsFields';
 import { CancellationPolicyFields, readCancellationPolicy } from './CancellationPolicyFields';
 import { HotelRoomsList } from './HotelRoomsList';
 import { HotelRatesTab } from '../rates/HotelRatesTab';
+import { HotelAvailabilityTab } from '../inventory/HotelAvailabilityTab';
+import { HotelSetupChecklist, type WorkspaceTab } from './HotelSetupChecklist';
+import { PublishBlockersInfo } from './PublishBlockersInfo';
 
-export type WorkspaceTab = 'hotel' | 'rooms' | 'rates' | 'cancellation';
+export type { WorkspaceTab };
 
 function normalizeTab(raw: string | null): WorkspaceTab {
-  if (!raw) return 'hotel';
-  if (raw === 'general' || raw === 'photos' || raw === 'hotel') return 'hotel';
-  if (raw === 'rooms') return 'rooms';
-  if (raw === 'rates') return 'rates';
+  if (raw === 'rooms' || raw === 'rates' || raw === 'availability') return raw;
   if (raw === 'policy' || raw === 'cancellation') return 'cancellation';
   return 'hotel';
 }
@@ -43,6 +34,8 @@ interface HotelWorkspaceProps {
   hotel: Hotel;
   onClose: () => void;
   onSaved: (hotel: Hotel) => void;
+  /** Lets the page guard its own navigation (e.g. "Back to hotels") while edits are unsaved. */
+  onDirtyChange?: (dirty: boolean) => void;
   staff?: StaffMe;
   variant?: 'modal' | 'inline';
 }
@@ -58,26 +51,47 @@ function initialMedia(hotel: Hotel): HotelMediaItem[] {
   return legacy;
 }
 
-export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, variant = 'inline' }: HotelWorkspaceProps) {
+const HOTEL_FORM_ID = 'hotel-details-form';
+
+export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, onDirtyChange, staff, variant = 'inline' }: HotelWorkspaceProps) {
   const { busy, run } = useBusyGuard();
   const toast = useToast();
   const formErrors = useServerErrors();
 
   const [hotel, setHotel] = useState(initialHotel);
   const [rooms, setRooms] = useState<RoomType[]>([]);
+  const [readiness, setReadiness] = useState<HotelReadiness | null>(null);
   const [mediaList, setMediaList] = useState<HotelMediaItem[]>(() => initialMedia(initialHotel));
-  const [savingMedia, setSavingMedia] = useState(false);
   const [showRoom, setShowRoom] = useState(false);
   const [roomForMedia, setRoomForMedia] = useState<RoomType | null>(null);
   const [statusModal, setStatusModal] = useState<'SUSPENDED' | 'ARCHIVED' | null>(null);
-  const [publishProblems, setPublishProblems] = useState<PublishProblem[]>([]);
   const readOnly = hotel.status === 'ARCHIVED';
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = normalizeTab(searchParams.get('tab'));
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>(requestedTab);
+  // Unsaved-change tracking: form edits per tab, photos compared with what is saved.
+  const [detailsDirty, setDetailsDirty] = useState(false);
+  const [policyDirty, setPolicyDirty] = useState(false);
+  const photosDirty = JSON.stringify(mediaList) !== JSON.stringify(initialMedia(hotel));
+  const dirtyFor = (tab: WorkspaceTab) => (tab === 'hotel' ? detailsDirty || photosDirty : tab === 'cancellation' ? policyDirty : false);
+  const anyDirty = detailsDirty || photosDirty || policyDirty;
+  const [pendingTab, setPendingTab] = useState<WorkspaceTab | null>(null);
 
-  const switchTab = (tab: WorkspaceTab) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(() => normalizeTab(searchParams.get('tab')));
+
+  useEffect(() => onDirtyChange?.(anyDirty), [anyDirty, onDirtyChange]);
+
+  // Warn before closing or reloading the browser tab with unsaved edits.
+  useEffect(() => {
+    if (!anyDirty) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [anyDirty]);
+
+  const goToTab = (tab: WorkspaceTab) => {
     setActiveTab(tab);
     setSearchParams(
       (prev) => {
@@ -90,9 +104,31 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
     );
   };
 
+  const requestTab = (tab: WorkspaceTab) => {
+    if (tab === activeTab) return;
+    if (dirtyFor(activeTab)) setPendingTab(tab);
+    else goToTab(tab);
+  };
+
+  const discardAndSwitch = () => {
+    setDetailsDirty(false);
+    setPolicyDirty(false);
+    setMediaList(initialMedia(hotel));
+    if (pendingTab) goToTab(pendingTab);
+    setPendingTab(null);
+  };
+
   useEffect(() => {
     if (hotel.media && hotel.media.length > 0) setMediaList(hotel.media);
   }, [hotel.media]);
+
+  const loadReadiness = useCallback(async () => {
+    try {
+      setReadiness(await getHotelReadiness(readId(hotel)));
+    } catch {
+      /* Checklist stays as it was */
+    }
+  }, [hotel]);
 
   const loadRooms = useCallback(async () => {
     try {
@@ -104,7 +140,13 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
 
   useEffect(() => {
     void loadRooms();
-  }, [loadRooms]);
+    void loadReadiness();
+  }, [loadRooms, loadReadiness]);
+
+  const refreshAfterSetupChange = () => {
+    void loadRooms();
+    void loadReadiness();
+  };
 
   const applySaved = (h: Hotel, message: string) => {
     setHotel(h);
@@ -114,32 +156,18 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
 
   const onConflict = () => toast.error('This hotel was changed in another session. Reload the page to get the latest version.');
 
-  const saveMedia = async () => {
-    setSavingMedia(true);
-    try {
-      applySaved(await updateHotelMedia(readId(hotel), hotel.version, mediaList), 'Hotel photos saved.');
-    } catch (err) {
-      handleFormError(err, formErrors, toast, { onConflict });
-    } finally {
-      setSavingMedia(false);
-    }
-  };
-
   const publish = () =>
     run(async () => {
-      setPublishProblems([]);
       try {
         const h = await publishHotel(readId(hotel), hotel.version);
         applySaved(h, hotel.status === 'SUSPENDED' ? 'Hotel reactivated and visible to guests.' : 'Hotel published and visible to guests.');
       } catch (e) {
         handleFormError(e, formErrors, toast, {
-          onNotReady: (problems) => {
-            setPublishProblems(problems);
-            toast.error('Not ready to publish yet. See missing items below.');
-          },
+          onNotReady: () => toast.error('Not ready to publish yet. See what is still needed below.'),
           onConflict,
         });
       }
+      void loadReadiness();
     });
 
   const suspend = (reason: string) =>
@@ -160,48 +188,57 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
       }
     });
 
-  const saveWith = (buildPayload: (f: FormData) => object, message: string) => (e: FormEvent<HTMLFormElement>) => {
+  /** One save for the Hotel tab: details first, then photos if they changed (each needs the latest version). */
+  const saveHotelTab = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     formErrors.clearErrors();
-    const payload = buildPayload(new FormData(e.currentTarget));
+    const details = readHotelDetails(new FormData(e.currentTarget));
+    const savePhotos = photosDirty;
     void run(async () => {
       try {
-        applySaved(await updateHotel(readId(hotel), { version: hotel.version, ...payload }), message);
+        let h = hotel;
+        if (detailsDirty || !savePhotos) h = await updateHotel(readId(hotel), { version: h.version, ...details });
+        if (savePhotos) h = await updateHotelMedia(readId(h), h.version, mediaList);
+        setDetailsDirty(false);
+        applySaved(h, savePhotos ? 'Hotel details and photos saved.' : 'Hotel details saved.');
+        void loadReadiness();
       } catch (err) {
         handleFormError(err, formErrors, toast, { onConflict });
       }
     });
   };
 
-  const saveDetails = saveWith(readHotelDetails, 'Hotel details saved.');
-  const savePolicy = saveWith((f) => ({ cancellationPolicy: readCancellationPolicy(f) }), 'Cancellation policy saved.');
-
-  // Readiness calculations for the 4 tabs
-  const isHotelReady = Boolean(hotel.name && hotel.address?.line1 && hotel.address?.city && hotel.timezone && hotel.contact?.email && mediaList.length > 0);
-  const isRoomsReady = rooms.length > 0;
-  const isPolicyReady = Boolean(hotel.cancellationPolicy?.effectiveFrom && hotel.cancellationPolicy?.afterCutoff);
+  const savePolicy = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    formErrors.clearErrors();
+    const cancellationPolicy = readCancellationPolicy(new FormData(e.currentTarget));
+    void run(async () => {
+      try {
+        const h = await updateHotel(readId(hotel), { version: hotel.version, cancellationPolicy });
+        setPolicyDirty(false);
+        applySaved(h, 'Cancellation policy saved.');
+        void loadReadiness();
+      } catch (err) {
+        handleFormError(err, formErrors, toast, { onConflict });
+      }
+    });
+  };
 
   const canEditRates = !staff || staff.permissions.includes('rates.edit');
+  const stillNeeded = readiness && !readiness.ready && hotel.status !== 'PUBLISHED' && !readOnly ? readiness.problems : [];
 
   const body = (
     <div className="space-y-6">
-      {/* Top Header & Actions Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <Status status={hotel.status} variant="pill" />
           <span className="text-xs font-mono text-slate-400">/{hotel.slug}</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <PublishBlockersInfo problems={stillNeeded} />
           {!readOnly && (
             <Can permission="hotels.archive">
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<Archive size={14} />}
-                onClick={() => setStatusModal('ARCHIVED')}
-                disabled={busy}
-                className="text-rose-600 hover:bg-rose-50"
-              >
+              <Button variant="ghost" size="sm" leftIcon={<Archive size={14} />} onClick={() => setStatusModal('ARCHIVED')} disabled={busy} className="text-rose-600 hover:bg-rose-50">
                 Archive
               </Button>
             </Can>
@@ -223,105 +260,19 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
                 loadingLabel={hotel.status === 'DRAFT' ? 'Publishing…' : 'Reactivating…'}
                 onClick={publish}
               >
-                {hotel.status === 'DRAFT' ? 'Publish Hotel' : 'Reactivate Hotel'}
+                {hotel.status === 'DRAFT' ? 'Publish hotel' : 'Reactivate hotel'}
               </Button>
             </Can>
           )}
         </div>
       </div>
 
-      {/* Publishing Checklist Tab Navigation (Single Header Switcher) */}
-      <nav
-        aria-label="Hotel configuration checklist tabs"
-        className="p-2 sm:p-2.5 bg-slate-50/90 border border-slate-200/90 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-2.5 shadow-2xs"
-      >
-        <div className="flex items-center gap-2 px-1 sm:pl-2">
-          <span className="w-6 h-6 rounded-lg bg-amber-100/80 text-amber-700 flex items-center justify-center shrink-0">
-            <Sparkles size={13} />
-          </span>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Publishing Checklist:</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-1.5 w-full md:w-auto">
-          <button
-            type="button"
-            onClick={() => switchTab('hotel')}
-            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'hotel'
-                ? 'bg-white text-emerald-950 shadow-xs border border-slate-200/90 ring-2 ring-emerald-600/10'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            {isHotelReady ? (
-              <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-            ) : (
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-            )}
-            <span className="truncate">1. Hotel & Photos</span>
-            {mediaList.length > 0 && (
-              <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-md font-semibold hidden xs:inline">
-                {mediaList.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => switchTab('rooms')}
-            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'rooms'
-                ? 'bg-white text-emerald-950 shadow-xs border border-slate-200/90 ring-2 ring-emerald-600/10'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            {isRoomsReady ? (
-              <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-            ) : (
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-            )}
-            <span className="truncate">2. Room Types</span>
-            {rooms.length > 0 && (
-              <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-md font-semibold hidden xs:inline">
-                {rooms.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => switchTab('rates')}
-            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'rates'
-                ? 'bg-white text-emerald-950 shadow-xs border border-slate-200/90 ring-2 ring-emerald-600/10'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            {rooms.length > 0 ? (
-              <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-            ) : (
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0" />
-            )}
-            <span className="truncate">3. Rates</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => switchTab('cancellation')}
-            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'cancellation'
-                ? 'bg-white text-emerald-950 shadow-xs border border-slate-200/90 ring-2 ring-emerald-600/10'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            {isPolicyReady ? (
-              <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-            ) : (
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-            )}
-            <span className="truncate">4. Cancellation</span>
-          </button>
-        </div>
-      </nav>
+      <HotelSetupChecklist
+        readiness={readiness}
+        activeTab={activeTab}
+        onSelect={requestTab}
+        counts={{ hotel: mediaList.length, rooms: rooms.length }}
+      />
 
       {readOnly && (
         <Alert tone="warning" icon={<Lock size={16} />}>
@@ -329,77 +280,42 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
         </Alert>
       )}
 
-      {publishProblems.length > 0 && (
-        <Alert tone="error">
-          <b className="block mb-1">Before you can publish ({publishProblems.length} to fix):</b>
-          <ul className="list-disc pl-5 space-y-1">
-            {publishProblems.map((prob, i) => (
-              <li key={i}>{prob.message}</li>
-            ))}
-          </ul>
-        </Alert>
-      )}
 
       <div role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
-        {/* Tab 1: Hotel (Basics + Overall Hotel Media) */}
         {activeTab === 'hotel' && (
           <div className="space-y-10">
-            {/* Basics & Address Form */}
-            <form onSubmit={saveDetails}>
+            <form id={HOTEL_FORM_ID} onSubmit={saveHotelTab} onChange={() => setDetailsDirty(true)}>
               <fieldset disabled={readOnly} className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Property Details & Contact</h3>
-                    <p className="text-xs text-slate-500">Core identity, physical address, and contact coordinates.</p>
-                  </div>
-                </div>
-
+                <SectionTitle title="Property details & contact" copy="Identity, address and how guests reach you." />
                 <HotelDetailsFields hotel={hotel} formErrors={formErrors} key={hotel.version} />
-                <SaveBar readOnly={readOnly} busy={busy} label="Save hotel details" />
               </fieldset>
             </form>
 
-            {/* Hotel Media & Gallery */}
             <div className="pt-6 border-t border-slate-200/80 space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <ImageIcon size={16} className="text-slate-600" />
-                    <span>Property Photos & Gallery</span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Upload exterior, lobby, and amenity photos. Designate one as the primary hero image.
-                  </p>
-                </div>
-                {!readOnly && (
-                  <Can permission="hotels.edit">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      isLoading={savingMedia}
-                      loadingLabel="Saving photos…"
-                      onClick={saveMedia}
-                      leftIcon={<Check size={14} />}
-                    >
-                      Save photos
-                    </Button>
-                  </Can>
-                )}
-              </div>
-
-              <HotelMediaGalleryManager media={mediaList} onChange={setMediaList} disabled={savingMedia || readOnly} />
+              <SectionTitle
+                title={<span className="flex items-center gap-2"><ImageIcon size={16} className="text-slate-600" />Property photos</span>}
+                copy="Exterior, lobby and amenity photos. Mark one as the cover photo. Optional for publishing, but guests book more with photos."
+              />
+              <HotelMediaGalleryManager media={mediaList} onChange={setMediaList} disabled={busy || readOnly} />
             </div>
+
+            {!readOnly && (
+              <Can permission="hotels.edit">
+                <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
+                  {(detailsDirty || photosDirty) && <span className="text-xs text-amber-700">You have unsaved changes</span>}
+                  <Button type="submit" form={HOTEL_FORM_ID} variant="primary" size="md" leftIcon={<Check size={14} />} isLoading={busy} loadingLabel="Saving…" disabled={!detailsDirty && !photosDirty} title={!detailsDirty && !photosDirty ? 'Nothing to save yet' : undefined}>
+                    Save hotel
+                  </Button>
+                </div>
+              </Can>
+            )}
           </div>
         )}
 
-        {/* Tab 2: Room Types (Specs + Room Photos) */}
         {activeTab === 'rooms' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Room Categories</h3>
-                <p className="text-xs text-slate-500">Configure bookable room types and attach photos for each room.</p>
-              </div>
+              <SectionTitle title="Room types" copy="Bookable room categories and their photos." />
               {!readOnly && (
                 <Can permission="room_types.create">
                   <Button variant="secondary" size="sm" leftIcon={<Plus size={14} />} onClick={() => setShowRoom(true)}>
@@ -408,48 +324,45 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
                 </Can>
               )}
             </div>
-
-            <HotelRoomsList
-              rooms={rooms}
-              onManagePhotos={(room) => setRoomForMedia(room)}
-              readOnly={readOnly}
-            />
+            <HotelRoomsList rooms={rooms} onManagePhotos={(room) => setRoomForMedia(room)} readOnly={readOnly} />
           </div>
         )}
 
-        {/* Tab 3: Rates (Room Pricing) */}
         {activeTab === 'rates' && (
           <div className="space-y-6">
             <div className="pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-900">Room Pricing (Base Rates)</h3>
-              <p className="text-xs text-slate-500">
-                Set nightly base prices in minor currency units for each room type under this property.
-              </p>
+              <SectionTitle title="Nightly prices" copy="Set the base price per night (before tax) for each room type, in rupees." />
             </div>
-
-            <HotelRatesTab
-              hotel={hotel}
-              rooms={rooms}
-              canEditRates={canEditRates}
-              readOnly={readOnly}
-              onRatesUpdated={loadRooms}
-            />
+            <HotelRatesTab hotel={hotel} rooms={rooms} canEditRates={canEditRates} readOnly={readOnly} onRatesUpdated={refreshAfterSetupChange} />
           </div>
         )}
 
-        {/* Tab 4: Cancellation Policy */}
+        {activeTab === 'availability' && (
+          <div className="space-y-6">
+            <div className="pb-3 border-b border-slate-100">
+              <SectionTitle title="Availability" copy="Open dates for sale so guests can book each room type." />
+            </div>
+            <HotelAvailabilityTab hotel={hotel} rooms={rooms} readOnly={readOnly} onChanged={loadReadiness} />
+          </div>
+        )}
+
         {activeTab === 'cancellation' && (
-          <form onSubmit={savePolicy}>
+          <form onSubmit={savePolicy} onChange={() => setPolicyDirty(true)}>
             <fieldset disabled={readOnly} className="space-y-6">
               <div className="pb-3 border-b border-slate-100">
-                <h3 className="text-sm font-bold text-slate-900">Cancellation & Refund Terms</h3>
-                <p className="text-xs text-slate-500">
-                  Cut-off windows, late cancellation penalty charges, and no-show fee rules.
-                </p>
+                <SectionTitle title="Cancellation & no-show terms" copy="Free cancellation window and the fees after it. Saved with every booking." />
               </div>
-
-              <CancellationPolicyFields hotel={hotel} formErrors={formErrors} key={hotel.version} />
-              <SaveBar readOnly={readOnly} busy={busy} label="Save cancellation policy" />
+              <CancellationPolicyFields hotel={hotel} formErrors={formErrors} key={hotel.version} onEdit={() => setPolicyDirty(true)} />
+              {!readOnly && (
+                <Can permission="hotels.edit">
+                  <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
+                    {policyDirty && <span className="text-xs text-amber-700">You have unsaved changes</span>}
+                    <Button type="submit" variant="primary" size="md" leftIcon={<Check size={14} />} isLoading={busy} loadingLabel="Saving…" disabled={!policyDirty} title={!policyDirty ? 'Nothing to save yet' : undefined}>
+                      Save cancellation policy
+                    </Button>
+                  </div>
+                </Can>
+              )}
             </fieldset>
           </form>
         )}
@@ -473,7 +386,7 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
           onClose={() => setShowRoom(false)}
           onCreated={() => {
             setShowRoom(false);
-            void loadRooms();
+            refreshAfterSetupChange();
           }}
         />
       )}
@@ -503,19 +416,27 @@ export function HotelWorkspace({ hotel: initialHotel, onClose, onSaved, staff, v
           }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={pendingTab !== null}
+        onClose={() => setPendingTab(null)}
+        onConfirm={discardAndSwitch}
+        title="Discard unsaved changes?"
+        message="You have changes on this step that haven't been saved. Leave without saving?"
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        variant="danger"
+        icon="warning"
+      />
     </>
   );
 }
 
-function SaveBar({ readOnly, busy, label }: { readOnly: boolean; busy: boolean; label: ReactNode }) {
-  if (readOnly) return null;
+function SectionTitle({ title, copy }: { title: ReactNode; copy: string }) {
   return (
-    <Can permission="hotels.edit">
-      <div className="pt-6 border-t border-slate-100 flex justify-end">
-        <Button type="submit" variant="primary" size="md" leftIcon={<Check size={14} />} isLoading={busy} loadingLabel="Saving…">
-          {label}
-        </Button>
-      </div>
-    </Can>
+    <div>
+      <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+      <p className="text-xs text-slate-500">{copy}</p>
+    </div>
   );
 }

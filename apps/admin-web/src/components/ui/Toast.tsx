@@ -11,6 +11,13 @@ export type ToastApi = {
 
 const ToastContext = createContext<ToastApi | null>(null);
 
+// Styles live here (the old .toast CSS classes no longer exist), so toasts always show as a fixed stack.
+const KIND_STYLE: Record<ToastKind, { box: string; icon: string }> = {
+  success: { box: 'border-emerald-200 bg-white', icon: 'bg-emerald-100 text-emerald-700' },
+  error: { box: 'border-rose-200 bg-white', icon: 'bg-rose-100 text-rose-700' },
+  info: { box: 'border-sky-200 bg-white', icon: 'bg-sky-100 text-sky-700' },
+};
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
@@ -46,23 +53,26 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="toast-stack" aria-label="Notifications">
+      <div
+        className="fixed top-4 right-4 z-[60] flex flex-col gap-2 w-[calc(100%-2rem)] max-w-sm pointer-events-none"
+        aria-label="Notifications"
+      >
         {items.map((item) => {
           const Icon = item.kind === 'success' ? Check : item.kind === 'error' ? X : Info;
           return (
             <div
               key={item.id}
-              className={`toast toast-${item.kind}`}
+              className={`pointer-events-auto flex items-start gap-3 p-3 rounded-xl border shadow-lg ${KIND_STYLE[item.kind].box}`}
               role={item.kind === 'error' ? 'alert' : 'status'}
               aria-live={item.kind === 'error' ? 'assertive' : 'polite'}
             >
-              <span className="toast-icon">
+              <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${KIND_STYLE[item.kind].icon}`}>
                 <Icon size={17} />
               </span>
-              <span className="toast-message">{item.message}</span>
+              <span className="flex-1 min-w-0 text-sm text-slate-800 leading-snug pt-1">{item.message}</span>
               <button
                 type="button"
-                className="toast-dismiss"
+                className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 shrink-0"
                 onClick={() => dismiss(item.id)}
                 aria-label="Dismiss notification"
               >

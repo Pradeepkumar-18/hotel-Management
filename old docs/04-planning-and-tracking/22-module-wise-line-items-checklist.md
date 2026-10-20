@@ -44,6 +44,7 @@
 - [ ] Add cancellation, check-in, checkout, and guest policies
 - [x] Admin property directory UI, workspace drawer, and publication readiness checks
 - [x] Validate unique hotel slugs and required property details
+- [x] Workspace setup checklist driven by server readiness (5 steps incl. Availability), real list setup progress, unsaved-change protection (evidence: .agent/work/20261020-ux-top4-fixes/verify.md)
 - [x] Form field typing Phase A+B: India PIN, ISO country/currency, https/`/uploads` media URLs, JPEG/PNG/WebP uploads, room code pattern, clearable room description, conditional room-count reason, cities + updatedSince list filters; shared Checkbox/DatePicker/Combobox/PasswordInput/ReasonField (evidence: .agent/work/20261019-field-types-phase-ab/verify.md)
 - [x] Hotel form keeps address line 2 and state/region on edit (state dropdown for India); inventory block/unblock reason validation fixed (`@MinLength(3)`) (evidence: Documentation/06-analysis/form-field-type-analysis.md, Status update)
 - [x] Simplified Add/Edit hotel UI: one shared fields block (`HotelDetailsFields`) with slug auto-fill and country/time-zone dropdowns, workspace on shared `Tabs` (Details, Photos, Rooms, Cancellation policy), archived read-only banner; all money inputs (base rate, fixed cancellation/no-show fee) typed in rupees via shared `MoneyInput` and sent as integer minor units (evidence: .agent/work/20261019-simplify-hotel-forms-inr-money/verify.md)

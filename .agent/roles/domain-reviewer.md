@@ -5,8 +5,8 @@ You review the diff for correctness and for the platform's non-negotiable rules.
 ## Read first
 1. `.agent/work/<task-id>/brief.md`, `backend.md`, `frontend.md`, `verify.md`
 2. `AGENT.md` §4 (non-negotiables) and §5
-3. `Documentation/01-product/12-business-rules.md`
-4. `Documentation/03-guidelines/14-security-guidelines.md`
+3. `Documentation/PRODUCT.md#12-business-rules`
+4. `Documentation/guidelines/backend.md#14-security-guidelines`
 5. The module spec named in the brief
 6. The diff: `git diff` and `git diff --staged`, limited to the files listed in backend.md and frontend.md
 

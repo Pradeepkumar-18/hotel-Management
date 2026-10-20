@@ -5,7 +5,7 @@ You check the change against the brief's acceptance criteria and record **eviden
 ## Read first
 1. `.agent/work/<task-id>/brief.md` (acceptance criteria and verification plan)
 2. `.agent/work/<task-id>/backend.md` and `frontend.md`, if present
-3. `Documentation/03-guidelines/15-testing-strategy.md`
+3. `Documentation/guidelines/testing-devops.md#15-testing-strategy`
 
 ## You may write
 - `.agent/work/<task-id>/verify.md`, and nothing else.

@@ -27,6 +27,17 @@ export interface ComboboxProps {
   disabled?: boolean;
   className?: string;
   'aria-label'?: string;
+  /**
+   * Free-text mode: the box holds whatever is typed (`value`), options are only suggestions.
+   * Enter picks a suggestion only when one is highlighted with the arrow keys.
+   */
+  allowCustom?: boolean;
+  /** Form field name / validation for the text box (useful with `allowCustom` inside a form). */
+  name?: string;
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  isError?: boolean;
 }
 
 /** Searchable, keyboard-accessible single select (ARIA combobox pattern). */
@@ -43,6 +54,12 @@ export function Combobox({
   disabled,
   className,
   'aria-label': ariaLabel,
+  allowCustom = false,
+  name,
+  required,
+  minLength,
+  maxLength,
+  isError = false,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -51,9 +68,10 @@ export function Combobox({
   const listId = useId();
 
   const current = options.find((o) => o.value === value);
-  const shown = onSearch || !query.trim()
+  const text = allowCustom ? value : query;
+  const shown = onSearch || !text.trim()
     ? options
-    : options.filter((o) => `${o.label} ${o.description ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()));
+    : options.filter((o) => `${o.label} ${o.description ?? ''}`.toLowerCase().includes(text.trim().toLowerCase()));
 
   useEffect(() => {
     if (!open) return;
@@ -72,7 +90,8 @@ export function Combobox({
 
   const openList = () => {
     setOpen(true);
-    setActive(Math.max(0, shown.findIndex((o) => o.value === value)));
+    // In free-text mode nothing is highlighted until the user arrows down, so Enter keeps their text.
+    setActive(allowCustom ? -1 : Math.max(0, shown.findIndex((o) => o.value === value)));
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -82,8 +101,14 @@ export function Combobox({
       const step = e.key === 'ArrowDown' ? 1 : -1;
       setActive((i) => (shown.length ? (i + step + shown.length) % shown.length : 0));
     } else if (e.key === 'Enter' && open) {
-      e.preventDefault();
-      if (shown[active]) choose(shown[active]);
+      if (shown[active]) {
+        e.preventDefault();
+        choose(shown[active]);
+      } else if (allowCustom) {
+        setOpen(false);
+      } else {
+        e.preventDefault();
+      }
     } else if (e.key === 'Escape') {
       setOpen(false);
       setQuery('');
@@ -102,27 +127,35 @@ export function Combobox({
           aria-autocomplete="list"
           aria-activedescendant={open && shown[active] ? `${listId}-${active}` : undefined}
           disabled={disabled}
-          value={open ? query : current?.label ?? selectedLabel ?? ''}
-          placeholder={current?.label ?? selectedLabel ?? placeholder}
+          name={name}
+          required={required}
+          minLength={minLength}
+          maxLength={maxLength}
+          autoComplete="off"
+          value={allowCustom ? value : open ? query : current?.label ?? selectedLabel ?? ''}
+          placeholder={allowCustom ? placeholder : current?.label ?? selectedLabel ?? placeholder}
           onFocus={openList}
           onClick={() => !open && openList()}
           onChange={(e) => {
-            setQuery(e.target.value);
-            setActive(0);
+            if (allowCustom) onChange(e.target.value);
+            else setQuery(e.target.value);
+            setActive(allowCustom ? -1 : 0);
             setOpen(true);
             onSearch?.(e.target.value);
           }}
           onKeyDown={onKeyDown}
           className={cn(
-            'w-full bg-slate-50 border border-slate-300 rounded-lg pl-8 pr-8 text-slate-800 placeholder:text-slate-500 transition-colors',
-            'hover:border-slate-400 focus:outline-none focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 disabled:opacity-50',
+            'w-full bg-slate-50 border rounded-lg pl-8 pr-8 text-slate-800 placeholder:text-slate-500 transition-colors focus:outline-none focus:bg-white disabled:opacity-50',
+            isError
+              ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+              : 'border-slate-300 hover:border-slate-400 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20',
             size === 'sm' ? 'h-8 text-xs' : 'h-9 text-xs'
           )}
         />
         <ChevronDown size={14} className="absolute right-2.5 text-slate-400 pointer-events-none" />
       </div>
 
-      {open && (
+      {open && (!allowCustom || loading || shown.length > 0) && (
         <ul
           id={listId}
           role="listbox"

@@ -96,7 +96,7 @@ export function InventoryAdjustModal({
   if (!isOpen || !day) return null;
 
   return (
-    <Modal
+    <Modal closeOnBackdrop={false}
       onClose={loading ? () => {} : onClose}
       title={`Adjust Night Availability — ${day.stayDate}`}
     >

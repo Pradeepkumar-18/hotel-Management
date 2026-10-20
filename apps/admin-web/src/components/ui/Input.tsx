@@ -15,7 +15,7 @@ const sizeClasses = {
 };
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ size = 'md', isError = false, leftIcon, rightIcon, className = '', disabled, ...props }, ref) => {
+  ({ size = 'md', isError = false, leftIcon, rightIcon, className = '', disabled, onWheel, ...props }, ref) => {
     return (
       <div className="relative flex items-center w-full">
         {leftIcon && (
@@ -26,6 +26,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           disabled={disabled}
+          onWheel={(e) => {
+            // Browsers change a focused number field's value on mouse-wheel scroll. Dropping focus first
+            // stops the accidental change and lets the page scroll as the user expects.
+            if (props.type === 'number' && document.activeElement === e.currentTarget) e.currentTarget.blur();
+            onWheel?.(e);
+          }}
           className={cn(
             'w-full bg-slate-50 border transition-colors duration-150 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white disabled:opacity-50 disabled:cursor-not-allowed',
             isError

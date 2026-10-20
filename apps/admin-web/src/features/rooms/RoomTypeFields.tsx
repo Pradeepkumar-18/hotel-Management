@@ -1,6 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { RoomType } from '../../api';
-import { Field, Input, Textarea } from '../../components/ui';
+import { Combobox, Field, Input, Textarea } from '../../components/ui';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { listRoomTypeNames } from './rooms.api';
 import { useServerErrors } from '../../hooks/useServerErrors';
 
 /** Letters/digits in dash-separated groups, e.g. DLX-K. Matches the API rule. */
@@ -18,19 +20,44 @@ interface RoomTypeFieldsProps {
 /** Name, code, description and capacity fields shared by the room-type page and the quick-add modal. */
 export function RoomTypeFields({ room, formErrors, onTotalChange, compact = false }: RoomTypeFieldsProps) {
   const [code, setCode] = useState(room?.code ?? '');
+  // Name: free text with suggestions of names already used in hotels the user can access.
+  const [name, setName] = useState(room?.name ?? '');
+  const debouncedName = useDebouncedValue(name, 250);
+  const [suggestions, setSuggestions] = useState<Array<{ name: string; hotelCount: number }>>([]);
+  const [loadingNames, setLoadingNames] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoadingNames(true);
+    listRoomTypeNames(debouncedName, controller.signal)
+      .then(setSuggestions)
+      .catch(() => {
+        if (!controller.signal.aborted) setSuggestions([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingNames(false);
+      });
+    return () => controller.abort();
+  }, [debouncedName]);
   const err = (...keys: string[]) => keys.map((k) => formErrors.getError(k)).find(Boolean);
 
   return (
     <div className="space-y-8">
       <Group title="General details" hide={compact}>
-        <Field label="Room category name" required hint={compact ? undefined : 'e.g. Deluxe Ocean View Suite'} error={err('name')}>
-          <Input
+        <Field label="Room category name" required hint="Choose a name used in your other hotels to keep names consistent, or type a new one" error={err('name')}>
+          <Combobox
+            allowCustom
             name="name"
             required
             minLength={2}
             maxLength={120}
-            defaultValue={room?.name ?? ''}
-            placeholder="Deluxe Ocean View Suite"
+            aria-label="Room category name"
+            value={name}
+            onChange={setName}
+            loading={loadingNames && suggestions.length === 0}
+            options={suggestions
+              .filter((s) => s.name.toLowerCase() !== name.trim().toLowerCase())
+              .map((s) => ({ value: s.name, label: s.name, description: `Used in ${s.hotelCount} ${s.hotelCount === 1 ? 'hotel' : 'hotels'}` }))}
+            placeholder="Pick an existing name or type a new one"
             isError={Boolean(err('name'))}
           />
         </Field>

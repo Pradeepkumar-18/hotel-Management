@@ -57,6 +57,13 @@ export interface PublicHotelDetail {
 }
 import { CancellationFeeBasis, HotelCancellationPolicy } from './schemas/hotel.schema';
 
+export interface HotelListResult {
+  items: Array<Record<string, unknown> & { setup: { done: number; total: number; ready: boolean } }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 @Injectable()
 export class HotelService {
   constructor(
@@ -70,7 +77,7 @@ export class HotelService {
     private readonly publishChecks: HotelPublishChecks,
   ) {}
 
-  async list(query: HotelListQueryDto, actor: StaffPrincipal) {
+  async list(query: HotelListQueryDto, actor: StaffPrincipal): Promise<HotelListResult> {
     const filter: Record<string, unknown> = {};
     // Archived hotels are hidden unless explicitly requested with status=ARCHIVED.
     const statusConditions: Record<string, unknown>[] = [
@@ -92,7 +99,14 @@ export class HotelService {
       this.hotelModel.find(filter).sort({ name: 1 }).skip(query.offset).limit(query.limit).lean(),
       this.hotelModel.countDocuments(filter),
     ]);
-    return { items, total, limit: query.limit, offset: query.offset };
+    // Real setup progress per row (same rules as publish); page size is capped at 100.
+    const withSetup = await Promise.all(
+      items.map(async (hotel) => {
+        const { done, total: steps, ready } = await this.publishChecks.readiness(hotel);
+        return { ...hotel, setup: { done, total: steps, ready } };
+      }),
+    );
+    return { items: withSetup, total, limit: query.limit, offset: query.offset };
   }
 
   /** Distinct cities of non-archived hotels in the actor's scope, for the list's Location filter. */
@@ -272,6 +286,11 @@ export class HotelService {
     if (!hotel) throw new NotFoundException('Hotel not found');
     assertHotelScope(actor, hotel._id.toString());
     return hotel;
+  }
+
+  /** Publishing checklist for one hotel (same rules as publish). */
+  async getReadiness(id: string, actor: StaffPrincipal) {
+    return this.publishChecks.readiness(await this.getById(id, actor));
   }
 
   async getPublicBySlug(slug: string): Promise<PublicHotelDetail> {

@@ -53,7 +53,7 @@ export function BulkStatusConfirmModal({
   };
 
   return (
-    <Modal
+    <Modal closeOnBackdrop={false}
       onClose={loading ? () => {} : onClose}
       title={count === 1 ? `${STATUS_LABEL[status]} hotel` : `${STATUS_LABEL[status]} ${count} hotels`}
     >

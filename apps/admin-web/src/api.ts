@@ -57,6 +57,8 @@ export type Hotel = {
   heroImage?: string;
   images?: string[];
   media?: HotelMediaItem[];
+  /** Real setup progress from GET /admin/hotels (same rules as publish). */
+  setup?: { done: number; total: number; ready: boolean };
   contact?: { email?: string; phone?: string };
   address: { city: string; countryCode: string; line1?: string; line2?: string; region?: string; postalCode?: string };
   cancellationPolicy?: {

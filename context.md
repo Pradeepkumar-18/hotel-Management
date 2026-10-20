@@ -42,36 +42,30 @@ Read [`AGENT.md`](./AGENT.md) for mandatory engineering rules and [`Documentatio
 
 ### Product and delivery documents
 
-- `01-product/00-project-context.md`: mission, personas, assumptions, and success measures.
-- `01-product/01-product-requirements.md`: guest/admin requirements and quality needs.
-- `01-product/02-feature-roadmap.md`: long-range capability phases.
-- `01-product/03-mvp-scope.md`: what is included, deferred, excluded, and MVP exit criteria.
-- `04-planning-and-tracking/18-development-phases.md`: proposed sequence of delivery phases.
-- `04-planning-and-tracking/19-task-board.md`: current task tracking; statuses require evidence.
-- `04-planning-and-tracking/20-decision-log.md`: approved, proposed, and open decisions.
-- `04-planning-and-tracking/22-module-wise-line-items-checklist.md`: one-line module implementation tracker; unchecked is the default.
+- `MVP.md`: what is in and out of the MVP, MVP exit criteria, and the delivery phases (old 03, 18, roadmap phases 0–2). **Main document to follow.**
+- `TASKS.md`: the module-wise checklist plus the task board (old 22, 19); statuses require evidence, unchecked is the default. **Main document to follow.**
+- `PRODUCT.md`: guest/admin requirements, cross-cutting business rules and state rules, roadmap items that are "not now", AI ideas (old 01, 12, 02 phases 3–4, 17).
+- `README.md`: project context (old 00), reading order (old EXECUTION-ORDER), how the docs drive the agent (old DOCUMENTATION-REPORT), contributor rules (old 21) and the old → new file map.
 
 ### Technical contracts
 
-- `02-architecture/04-architecture.md`: module boundaries and core booking architecture.
-- `02-architecture/05-tech-stack.md`: selected stack and supporting libraries.
-- `02-architecture/06-project-structure.md`: code organization proposal.
-- `02-architecture/07-database-design.md`: core collections, indexes, and inventory representation.
-- `02-architecture/08-api-specification.md`: versioned endpoint conventions and initial contract.
-- `03-guidelines/09-frontend-guidelines.md`, `03-guidelines/10-backend-guidelines.md`, `03-guidelines/13-ui-ux-guidelines.md`: implementation and interaction conventions.
-- `03-guidelines/11-auth-rbac.md`, `03-guidelines/14-security-guidelines.md`: project-wide security overview.
-- `01-product/12-business-rules.md`: business invariants and state rules.
-- `03-guidelines/15-testing-strategy.md`, `03-guidelines/16-devops.md`: verification and operations overview.
+- `ARCHITECTURE.md`: module boundaries, stack, code organization and the decision log (old 04, 05, 06, 20).
+- `DATA_MODEL.md`: core collections, indexes and inventory representation (old 07).
+- `API.md`: versioned endpoint conventions and contract (old 08).
+- `guidelines/frontend-ui.md`: frontend, UI/UX, UI generation brief and the admin UI kit (old 09, 13, 23, modules/admin-ui-kit).
+- `guidelines/backend.md`: backend, auth/RBAC and security rules (old 10, 11, 14).
+- `guidelines/testing-devops.md`: testing strategy and operations (old 15, 16).
+- `modules/index.md` → `modules/<domain>.md`: one spec per module, including module-specific business rules.
 
-### Sprint plans, progress logs, analyses and guides
+### History, analyses and guides
 
-- `05-sprints-and-progress/`: Sprint 2 plan (24, not yet built), hardening log (25), full-stack fix plan and its progress log (26).
-- `06-analysis/`: business analyses of the hotel, room-type and pricing modules.
-- `07-guides/`: admin-web navigation guide (27) and local setup (QUICKSTART).
+- `HISTORY.md`: Sprint 2 plan (24, not yet built), hardening log (25), full-stack fix plan and its progress log (26).
+- `ANALYSIS.md`: business analyses of the hotel, room-type and pricing modules, the form field-type analysis and the hotel module UX review.
+- `GUIDES.md`: local setup (Quickstart), admin-web navigation guide (27) and platform configuration guide (28).
 
 ### Detailed module specs
 
-Start at [`modules/README.md`](./Documentation/modules/README.md). It indexes the dedicated specs for authentication, RBAC, staff lifecycle, guest accounts, hotels, room types, inventory/availability, pricing/tax, search, booking lifecycle, payments/refunds, cancellation policies, reviews, notifications, media, reporting, audit, deployment, and the admin UI kit.
+Start at [`modules/index.md`](./Documentation/modules/index.md). It indexes the dedicated specs for authentication, RBAC, staff lifecycle, guest accounts, hotels, room types, inventory/availability, pricing/tax, search, booking lifecycle, payments/refunds, cancellation policies, reviews, notifications, media, reporting, audit, deployment, and the admin UI kit.
 
 ## 6. Recommended implementation order and gates
 
@@ -125,7 +119,7 @@ Consider channel managers, localization/multiple currencies, analytics, caching/
 
 ## 7. How to choose the next task
 
-1. Check `19-task-board.md` for the current status and dependencies.
+1. Check `TASKS.md#19-task-board` for the current status and dependencies.
 2. Select the earliest incomplete phase with its gate still open.
 3. Read the corresponding detailed module spec(s) and one-line checklist section.
 4. Identify API/schema/index/security/audit impacts before editing.

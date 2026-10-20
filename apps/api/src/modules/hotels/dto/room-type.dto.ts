@@ -46,3 +46,8 @@ export class UpdateRoomTypeDto {
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => HotelMediaItemDto) media?: HotelMediaItemDto[];
   @IsOptional() @IsInt() @Min(0) @Max(10000) totalRooms?: number;
 }
+
+/** Query for GET /admin/room-types/names (name suggestions). */
+export class RoomTypeNameQueryDto {
+  @IsOptional() @IsString() @MaxLength(60) search?: string;
+}

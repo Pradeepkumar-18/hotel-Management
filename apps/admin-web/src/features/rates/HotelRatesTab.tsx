@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { CheckCircle2, AlertCircle, IndianRupee, Edit3, Plus, Lock } from 'lucide-react';
+import { AlertCircle, IndianRupee, Edit3, Plus, Lock } from 'lucide-react';
 import { Hotel, RoomType } from '../../api';
 import { Alert, Button, Field, Modal, MoneyInput, ReasonField, Select, Input, EmptyState } from '../../components/ui';
 import { useToast, useBusyGuard } from '../../ui-feedback';
@@ -145,12 +145,8 @@ export function HotelRatesTab({
 
   return (
     <div className="space-y-6">
-      {/* Coverage Status Banner */}
-      {missingCount === 0 ? (
-        <Alert tone="success" icon={<CheckCircle2 size={16} />}>
-          All {rooms.length} room {rooms.length === 1 ? 'type has' : 'types have'} an active base rate configured. Ready for bookings.
-        </Alert>
-      ) : (
+      {/* Shown only when something is missing; nothing to say when every room type has a rate. */}
+      {missingCount > 0 && (
         <Alert tone="warning" icon={<AlertCircle size={16} />}>
           {missingCount} room {missingCount === 1 ? 'type is' : 'types are'} missing pricing. Every room type needs a base rate before the hotel can be published.
         </Alert>
@@ -216,7 +212,7 @@ export function HotelRatesTab({
 
       {/* Edit Rate Modal */}
       {editingRoom && (
-        <Modal
+        <Modal closeOnBackdrop={false}
           title={`Set Base Rate — ${editingRoom.name}`}
           subtitle={`${editingRoom.code} · Base price per night before taxes`}
           onClose={() => setEditingRoom(null)}
@@ -227,7 +223,7 @@ export function HotelRatesTab({
             <Field
               label="Price per night"
               required
-              hint="Enter price in major currency (e.g. 3500). Stored securely as integer minor units."
+              hint="Price per night before tax, e.g. 3500 or 3500.50"
               error={formErrors.getError('amountMinorUnits')}
             >
               <MoneyInput

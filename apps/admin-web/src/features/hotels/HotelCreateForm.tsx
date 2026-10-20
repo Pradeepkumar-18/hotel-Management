@@ -61,9 +61,13 @@ export function HotelCreateForm({ onSuccess, onCancel }: HotelCreateFormProps) {
 
       <HotelDetailsFields formErrors={formErrors} />
 
-      <div className="pt-6 border-t border-slate-100">
+      <section className="pt-6 border-t border-slate-100 space-y-3">
+        <div>
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Photos</h4>
+          <p className="text-xs text-slate-500 mt-1">Optional. The first photo becomes the cover; you can change it later.</p>
+        </div>
         <HotelMediaGalleryManager media={mediaList} onChange={setMediaList} disabled={busy} />
-      </div>
+      </section>
 
       <div className="pt-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-xs text-slate-500">

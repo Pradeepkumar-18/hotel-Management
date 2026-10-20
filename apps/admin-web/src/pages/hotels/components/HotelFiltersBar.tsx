@@ -1,5 +1,5 @@
-import { Search, SlidersHorizontal } from 'lucide-react';
-import { Button, Combobox, Input, Select } from '../../../components/ui';
+import { Search, LayoutGrid, List } from 'lucide-react';
+import { Combobox, Input, Select, Tabs } from '../../../components/ui';
 import { HotelStatus, STATUS_LABEL } from '../../../features/hotels/hotel-status';
 
 interface HotelFiltersBarProps {
@@ -14,7 +14,8 @@ interface HotelFiltersBarProps {
   timeFilter: string;
   onTimeChange: (val: string) => void;
   uniqueLocations: string[];
-  onColumnsClick: () => void;
+  view: 'list' | 'cards';
+  onViewChange: (view: 'list' | 'cards') => void;
 }
 
 export function HotelFiltersBar({
@@ -29,13 +30,16 @@ export function HotelFiltersBar({
   timeFilter,
   onTimeChange,
   uniqueLocations,
-  onColumnsClick,
+  view,
+  onViewChange,
 }: HotelFiltersBarProps) {
   return (
-    <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 w-full">
+    <div className="flex flex-col lg:flex-row items-stretch lg:items-end justify-between gap-3 w-full">
+      {/* items-end: the search box lines up with the dropdown boxes, not their labels */}
       {/* Search Input */}
       <div className="flex-1 min-w-[200px] max-w-md">
         <Input
+          size="sm"
           type="search"
           maxLength={100}
           aria-label="Search hotels"
@@ -89,16 +93,17 @@ export function HotelFiltersBar({
           </Select>
         </div>
 
-        <div className="col-span-2 sm:col-span-1 self-end pt-1 sm:pt-3.5">
-          <Button
-            variant="outline"
+        <div className="col-span-2 sm:col-span-1 self-end">
+          <Tabs
+            variant="pills"
             size="sm"
-            leftIcon={<SlidersHorizontal size={14} />}
-            onClick={onColumnsClick}
-            className="h-8 w-full sm:w-auto justify-center"
-          >
-            Columns
-          </Button>
+            activeId={view}
+            onChange={(id) => onViewChange(id as 'list' | 'cards')}
+            items={[
+              { id: 'list', label: 'List', icon: <List size={14} /> },
+              { id: 'cards', label: 'Cards', icon: <LayoutGrid size={14} /> },
+            ]}
+          />
         </div>
       </div>
     </div>

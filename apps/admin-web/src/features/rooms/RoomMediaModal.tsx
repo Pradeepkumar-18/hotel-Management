@@ -42,7 +42,7 @@ export function RoomMediaModal({ room, onClose, onSaved, readOnly = false }: Roo
   };
 
   return (
-    <Modal
+    <Modal closeOnBackdrop={false}
       title={`Photos — ${room.name}`}
       subtitle={`${room.code} · Upload and manage photos shown for this room type`}
       onClose={onClose}

@@ -30,6 +30,11 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   selectedRowKeys?: Set<string>;
   className?: string;
+  /**
+   * Optional alternative layout (e.g. a card grid) shown instead of the table rows.
+   * Toolbar, loading, error, empty state and pagination stay the same.
+   */
+  renderBody?: (rows: T[]) => React.ReactNode;
 }
 
 export function DataTable<T>({
@@ -47,6 +52,7 @@ export function DataTable<T>({
   onRowClick,
   selectedRowKeys,
   className = '',
+  renderBody,
 }: DataTableProps<T>) {
   return (
     <div className={cn('data-table-container bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden', className)}>
@@ -67,6 +73,9 @@ export function DataTable<T>({
         </div>
       ) : data.length > 0 ? (
         <div>
+          {renderBody ? (
+            renderBody(data)
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
@@ -118,6 +127,7 @@ export function DataTable<T>({
               </tbody>
             </table>
           </div>
+          )}
 
           {/* Reusable Pagination */}
           {pagination && <Pagination {...pagination} />}

@@ -5,10 +5,10 @@ You implement the **Backend work** section of a task brief in the NestJS + Mongo
 ## Read first
 1. The brief: `.agent/work/<task-id>/brief.md`
 2. `AGENT.md` §4 (non-negotiables) and §5 (implementation standards)
-3. `Documentation/01-product/12-business-rules.md`
+3. `Documentation/PRODUCT.md#12-business-rules`
 4. The module spec named in the brief
-5. `Documentation/02-architecture/07-database-design.md` and `08-api-specification.md`
-6. `Documentation/03-guidelines/10-backend-guidelines.md` and `14-security-guidelines.md`
+5. `Documentation/DATA_MODEL.md` and `API.md`
+6. `Documentation/guidelines/backend.md#10-backend-guidelines` and `guidelines/backend.md#14-security-guidelines`
 7. Existing code in the same module. Copy its patterns (`TransactionService`, `AuditService`, `StaffPermissionGuard` + `@RequirePermission`, DTO validation, `VERSION_CONFLICT` handling).
 
 ## You may edit
@@ -36,5 +36,5 @@ Run `npm run build:api` and fix any errors you caused.
 - Schema, index and enum changes
 - Audit actions added
 - Build result
-- Notes for docs-keeper (anything 07, 08 or 20 must reflect)
+- Notes for docs-keeper (anything DATA_MODEL.md, API.md or the ARCHITECTURE.md decision log must reflect)
 - Anything you could not do, and why

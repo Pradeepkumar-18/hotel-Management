@@ -1,27 +1,41 @@
-# Notifications Module Specification
+# Notifications
 
-## Purpose
+<a id="notifications"></a>
+## Notifications Module Specification
 
-Deliver transactional messages without making email/SMS availability a prerequisite for booking correctness. Notifications are emitted from durable domain events after the booking/payment state change commits.
+### Purpose
 
-## Event triggers
+- **Booking correctness first:** deliver transactional messages without making email/SMS availability a prerequisite for booking correctness.
+- **Event-driven emission:** notifications are emitted from durable domain events after the booking/payment state change commits.
 
-Booking confirmed, cancellation accepted, refund status changed, pre-arrival reminder due, invitation created/resend, password reset requested, review invitation due. Each event has a stable event ID and template version.
+### Event triggers
 
-## Data and delivery
+- **Trigger events:**
+  - booking confirmed;
+  - cancellation accepted;
+  - refund status changed;
+  - pre-arrival reminder due;
+  - invitation created/resend;
+  - password reset requested;
+  - review invitation due.
+- **Event identity:** each event has a stable event ID and template version.
 
-NotificationAttempt stores eventId, recipient reference, channel, template, status, attempts, nextAttemptAt, provider message ID, safe error code, sentAt. Unique `(eventId, channel, recipient)` prevents accidental duplicates. Prefer outbox + worker for durable delivery; if no queue initially, persistent retry polling is required.
+### Data and delivery
 
-## Rules
+- **NotificationAttempt record:** stores eventId, recipient reference, channel, template, status, attempts, nextAttemptAt, provider message ID, safe error code, sentAt.
+- **Duplicate prevention:** unique `(eventId, channel, recipient)` prevents accidental duplicates.
+- **Durable delivery:** prefer outbox + worker for durable delivery; if there is no queue initially, persistent retry polling is required.
 
-- Render from minimal data snapshots; links use expiring secure tokens and do not expose guest data in URL query strings.
-- Templates are versioned, localized only when locale support is enabled, and previewable in admin tooling.
-- Retry transient errors with bounded exponential backoff and dead-letter/alert after configured attempts; do not retry permanent invalid-recipient errors forever.
-- Respect consent and local communication rules for non-transactional messages. Transactional vs marketing messages are separate.
-- Do not log full message body or sensitive contact details.
+### Rules
 
-## Acceptance criteria
+- **Minimal rendering data:** render from minimal data snapshots; links use expiring secure tokens and do not expose guest data in URL query strings.
+- **Templates:** templates are versioned, localized only when locale support is enabled, and previewable in admin tooling.
+- **Retries:** retry transient errors with bounded exponential backoff and dead-letter/alert after configured attempts; do not retry permanent invalid-recipient errors forever.
+- **Consent:** respect consent and local communication rules for non-transactional messages. Transactional vs marketing messages are separate.
+- **Logging:** do not log full message body or sensitive contact details.
 
-- Event retries do not send duplicate messages beyond provider-supported idempotency.
-- Notification outage does not roll back booking or payment state.
-- Delivery failure is visible to operations with safe diagnostics and retry path.
+### Acceptance criteria
+
+- **No duplicates on retry:** event retries do not send duplicate messages beyond provider-supported idempotency.
+- **Outage isolation:** a notification outage does not roll back booking or payment state.
+- **Operational visibility:** delivery failure is visible to operations with safe diagnostics and a retry path.

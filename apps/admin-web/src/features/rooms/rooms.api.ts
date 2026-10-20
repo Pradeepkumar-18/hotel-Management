@@ -4,6 +4,12 @@ export function listRoomTypes(hotelId: string, signal?: AbortSignal) {
   return request<RoomType[]>(`/admin/hotels/${hotelId}/room-types`, { signal });
 }
 
+/** Room category names already used in hotels this staff member can access (for name suggestions). */
+export function listRoomTypeNames(search: string, signal?: AbortSignal) {
+  const q = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+  return request<Array<{ name: string; hotelCount: number }>>(`/admin/room-types/names${q}`, { signal });
+}
+
 export function createRoomType(hotelId: string, body: Partial<RoomType>) {
   return request<RoomType>(`/admin/hotels/${hotelId}/room-types`, {
     method: 'POST',

@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Patch, Query, Req, UseGuards } from
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RequirePermission, StaffPermissionGuard, StaffPrincipal } from '../../common/auth/staff-permission.guard';
-import { CreateRoomTypeDto, UpdateRoomTypeDto } from './dto/room-type.dto';
+import { CreateRoomTypeDto, RoomTypeNameQueryDto, UpdateRoomTypeDto } from './dto/room-type.dto';
 import { StatusChangeDto } from './dto/status-change.dto';
 import { RoomTypeService } from './room-type.service';
 
@@ -26,6 +26,14 @@ export class AdminRoomTypesController {
   @RequirePermission('room_types.create')
   create(@Param('hotelId') hotelId: string, @Body() dto: CreateRoomTypeDto, @Req() request: StaffRequest) {
     return this.roomTypes.create(hotelId, dto, request.user);
+  }
+
+  // Declared before 'room-types/:id' so "names" is not read as an id.
+  @Get('room-types/names')
+  @RequirePermission('room_types.view')
+  @ApiOperation({ summary: 'Room category names used in accessible hotels, for name suggestions' })
+  names(@Query() query: RoomTypeNameQueryDto, @Req() request: StaffRequest) {
+    return this.roomTypes.listNames(request.user, query.search);
   }
 
   @Get('room-types/:id')

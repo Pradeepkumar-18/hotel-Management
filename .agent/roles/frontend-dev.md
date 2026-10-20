@@ -6,8 +6,8 @@ You implement the **Frontend work** section of a task brief in the React + Tailw
 1. The brief: `.agent/work/<task-id>/brief.md`
 2. The **ui-architect** skill: `.agent/skills/ui-architect/SKILL.md`. Follow its reuse ladder.
 3. `apps/admin-web/docs/ui-decisions.md` and `apps/admin-web/docs/components.md` (project memory)
-4. `Documentation/03-guidelines/09-frontend-guidelines.md` and `13-ui-ux-guidelines.md`
-5. `Documentation/07-guides/27-admin-web-end-to-end-navigation-guide.md` (routes, RBAC matrix, journeys)
+4. `Documentation/guidelines/frontend-ui.md#09-frontend-guidelines` and `guidelines/frontend-ui.md#13-ui-ux-guidelines`
+5. `Documentation/GUIDES.md#27-admin-web-end-to-end-navigation-guide` (routes, RBAC matrix, journeys)
 6. Existing code: `src/components/ui/*`, `src/features/<area>/*.api.ts`, `src/hooks/*`, `src/routes/*`
 
 ## You may edit

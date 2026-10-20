@@ -4,17 +4,29 @@ import { Building2, ExternalLink, MapPin, Plus, Upload } from 'lucide-react';
 import { Hotel, StaffMe, bulkUpdateHotelStatus, fetchHotelMetrics, HotelMetrics, isApiError } from '../../api';
 import { useToast } from '../../ui-feedback';
 import { Button, Checkbox, DataTable, Column, Status } from '../../components/ui';
-import { readId } from '../../utils/helpers';
+import { readId, resolveImageUrl } from '../../utils/helpers';
 import { HotelSummaryCards } from './components/HotelSummaryCards';
 import { HotelBulkActionsBar } from './components/HotelBulkActionsBar';
 import { HotelFiltersBar } from './components/HotelFiltersBar';
 import { BulkStatusConfirmModal } from './components/BulkStatusConfirmModal';
+import { HotelCardGrid } from './components/HotelCardGrid';
+import { HotelSetupProgress } from './components/HotelSetupProgress';
 import { useApiQuery, invalidate } from '../../hooks/useApiQuery';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { HotelStatus, STATUS_LABEL } from '../../features/hotels/hotel-status';
 import { listHotels, listHotelCities, HotelList } from '../../features/hotels/hotels.api';
 
 const PAGE_SIZES = [10, 25, 50];
+
+// List/Cards choice is a per-browser convenience; storage can be unavailable (private mode), so guard it.
+const VIEW_KEY = 'staywise.hotels.view';
+const readView = (): 'list' | 'cards' => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'list';
+  } catch {
+    return 'list';
+  }
+};
 /** Unknown values in the URL fall back to the defaults instead of reaching the API. */
 const readStatus = (v: string | null) => (v && v in STATUS_LABEL ? v : 'ALL');
 const readPageSize = (v: string | null) => {
@@ -47,6 +59,15 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
   const [setupFilter, setSetupFilter] = useState('ALL');
   const [timeFilter, setTimeFilter] = useState('ALL');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [view, setView] = useState<'list' | 'cards'>(readView);
+  const changeView = (next: 'list' | 'cards') => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      /* not remembered this time */
+    }
+  };
 
   // Pagination State initialized from URL params
   const [pageSize, setPageSize] = useState(() => readPageSize(searchParams.get('pageSize')));
@@ -255,9 +276,13 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
           >
             {h.primaryImage || h.heroImage ? (
               <img
-                src={h.primaryImage || h.heroImage}
+                // Stored as "/uploads/…" (served by the API, not the admin app), so resolve it to the API host.
+                src={resolveImageUrl(h.primaryImage || h.heroImage)}
                 alt={h.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             ) : (
               <Building2 size={20} className="text-[#166534]" />
@@ -295,31 +320,7 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
     {
       key: 'setup',
       header: 'SETUP PROGRESS',
-      cell: (h) => {
-        const isComplete = h.status === 'PUBLISHED';
-        const stepsDone = isComplete ? 4 : 3;
-        const totalSteps = 5;
-        const pct = isComplete ? 80 : 60;
-
-        return (
-          <div className="flex flex-col gap-1 min-w-[140px]">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700">
-                {stepsDone} of {totalSteps} completed
-              </span>
-              <span className="text-slate-500 font-bold text-xs">{pct}%</span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${
-                  isComplete ? 'bg-[#059669]' : 'bg-[#d97706]'
-                }`}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </div>
-        );
-      },
+      cell: (h) => <HotelSetupProgress setup={h.setup} />,
     },
     {
       key: 'updated',
@@ -419,6 +420,11 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
         error={error}
         onRowClick={(h) => navigate(`/admin/hotels/${readId(h)}`)}
         selectedRowKeys={selectedIds}
+        renderBody={
+          view === 'cards'
+            ? (rows) => <HotelCardGrid hotels={rows} selectedIds={selectedIds} onToggleSelect={toggleSelectRow} onOpen={handleOpenEdit} />
+            : undefined
+        }
         emptyTitle="No matching properties found"
         emptyCopy="Try adjusting your search keywords or filter dropdowns to view matching hotels."
         emptyIcon={<Building2 size={32} />}
@@ -462,7 +468,8 @@ export function HotelsPage({ staff }: { staff: StaffMe }) {
               setCurrentPage(1);
             }}
             uniqueLocations={uniqueLocations}
-            onColumnsClick={() => toast.info('Custom column ordering will be available in the upcoming phase.')}
+            view={view}
+            onViewChange={changeView}
           />
         }
         pagination={{

@@ -18,6 +18,6 @@ description: Staywise multi-agent orchestration rules
 
 - Agents hand off only through files in `.agent/work/<task-id>/`: `brief.md`, `backend.md`, `frontend.md`, `verify.md`, `review.md`, `docs.md`.
 - The API contract in `brief.md` is fixed. Only the planner may change it.
-- Never skip the docs-keeper stage. Update the existing living docs (08, 07, 19, 20, 22, module specs); don't create new standalone progress files.
+- Never skip the docs-keeper stage. Update the existing living docs (API.md, DATA_MODEL.md, ARCHITECTURE.md decision log, TASKS.md, MVP.md, modules/<domain>.md); don't create new standalone progress files.
 - Stop and ask the user when a task depends on an open or proposed ADR that affects money, tax, inventory, access, retention or the API.
 - Permissions are unchanged from `AGENTS.md` / `GEMINI.md`: ask before deleting any file or directory, and before any `git commit` or push.

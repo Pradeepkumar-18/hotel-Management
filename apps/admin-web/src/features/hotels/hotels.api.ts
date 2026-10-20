@@ -1,4 +1,19 @@
-import { request, Hotel, HotelMetrics } from '../../api';
+import { request, Hotel, HotelMetrics, PublishProblem } from '../../api';
+
+export type SetupStepKey = 'hotel' | 'rooms' | 'rates' | 'availability' | 'cancellation';
+
+export type HotelReadiness = {
+  ready: boolean;
+  done: number;
+  total: number;
+  steps: Array<{ key: SetupStepKey; done: boolean; problems: PublishProblem[] }>;
+  problems: PublishProblem[];
+};
+
+/** Publishing checklist for one hotel, computed by the server with the publish rules. */
+export function getHotelReadiness(id: string, signal?: AbortSignal) {
+  return request<HotelReadiness>(`/admin/hotels/${id}/readiness`, { signal });
+}
 import { HotelStatus } from './hotel-status';
 
 export type HotelList = {

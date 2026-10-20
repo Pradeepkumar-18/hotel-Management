@@ -7,7 +7,7 @@ description: Short pipeline for a small, contained bug fix (no new endpoint, sch
 Use this only when **all** of the following are true:
 - The fix touches about 3 files or fewer.
 - It adds no endpoint, schema field, index or permission.
-- It doesn't depend on any open decision in `20-decision-log.md`.
+- It doesn't depend on any open decision in `ARCHITECTURE.md#20-decision-log`.
 
 If any of these is false, stop and use `/implement-task` instead.
 

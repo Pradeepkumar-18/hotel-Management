@@ -16,7 +16,7 @@ This folder holds the multi-agent orchestration for Antigravity. The design live
 │   ├── frontend-dev.md     apps/admin-web only (uses skills/ui-architect)
 │   ├── verifier.md         builds/tests → verify.md with evidence
 │   ├── domain-reviewer.md  AGENT.md §4 checklist → review.md
-│   └── docs-keeper.md      updates 08/07/19/20/22 in the same change
+│   └── docs-keeper.md      updates API, DATA_MODEL, ARCHITECTURE (decisions), TASKS in the same change
 ├── skills/
 │   └── ui-architect/       existing UI skill
 └── work/<task-id>/         handoff files, created per task
