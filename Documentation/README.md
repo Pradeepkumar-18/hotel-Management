@@ -22,6 +22,8 @@
 
 ### Entry and planning files (this folder)
 
+- **[new plan/README.md](./new%20plan/README.md)**: the new plan (proposal, 2026-10-20) — shared baseline and index for PRD, MVP-PLAN (P1–P6 coding tasks), PHASES (P0–P8 roadmap), UX-PLAN, UI-PLAN, DATA-MODEL and MIGRATION-PLAN (structure change + effort), plus the UX proposal and the research report. Not yet reflected in MVP.md/TASKS.md until approved.
+
 - **[README.md](./README.md)**: this index — project overview and context, how to read and use the docs, the agent workflow and documentation report, contributor/AI agent rules, and the old → new mapping.
 - **[MVP.md](./MVP.md)**: MVP objective, In MVP / Out of MVP lists, exit criteria, delivery phases with gates, and the MVP-phase roadmap items.
 - **[TASKS.md](./TASKS.md)**: the single tracker — module-wise line-item checklist merged with the sprint task board, with `[x]`/`[ ]` state and evidence.

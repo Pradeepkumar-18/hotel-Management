@@ -1,7 +1,7 @@
 # Analysis Reports
 
 - **Purpose** — This file collects the five analysis reports that used to live in `06-analysis/`. Each report keeps its original content, rewritten as bullets; every finding, score, priority, effort, file:line reference, option list, open question and status update is kept.
-- **Order** — The three business-module analyses come first, then the form field-type analysis, then the hotel-module UX review.
+- **Order** — The three business-module analyses come first, then the form field-type analysis, then the hotel-module UX review, then the UI theme consistency audit (added later).
 - **Link convention** — Links to code are relative to this folder (`../apps/...`). Links to other docs point to their new home; line numbers from the old files are kept in the link text (e.g. `hotel-management.md:13`).
 
 ## Index
@@ -11,6 +11,7 @@
 - **[Business Module Analysis: Pricing Module](#pricing-business-analysis)** (October 13, 2026) — Traces base-rate requirements, minor-unit and currency invariants, publication rate gating, gaps, edge cases and the planned quote/tax engine.
 - **[Form Field Type Analysis: Admin Web](#form-field-type-analysis)** (October 19, 2026) — Reviews every admin form field against backend DTO/schema validation and recommends input types, shared controls, backend changes and option lists; includes status updates for the fixes made.
 - **[Hotel Module UX Review: Admin Web](#hotel-module-ux-review)** (October 20, 2026) — Scores the usability of the hotel setup and operations screens, walks the setup journey, lists findings with priority and effort, and records the top-4 fixes.
+- **[UI Theme Consistency Audit](#ui-theme-consistency-audit)** (October 20, 2026) — Derives the "hotel theme" from the Hotel pages and shared UI, then compares every routed admin page against it: scores per area, 77 findings by impact with file:line, reference cleanup, cross-cutting issues and a fix plan.
 
 ---
 
@@ -1565,3 +1566,201 @@ flowchart TD
 4. **Unsaved edits are protected.** Switching steps with unsaved changes asks "Discard unsaved changes?"; "Back to hotels" asks too; closing or reloading the browser tab warns. The Hotel step has one "Save hotel" button (details, then photos if changed). Form pop-ups no longer close on a stray click outside (Escape still closes). Saving no longer flashes a full-page loader or resets the open step.
 
 - **Limitation** — Sidebar links are not guarded (the app uses `BrowserRouter`, which has no navigation blocker); the browser-tab warning still covers reload/close.
+
+---
+
+<a id="ui-theme-consistency-audit"></a>
+## UI Theme Consistency Audit — 2026-10-20
+
+- **Platform:** Staywise admin web (`apps/admin-web`)
+- **Author:** Pair Programming Agent
+- **Date:** October 20, 2026
+- **Question:** Does every page look like the Hotel pages? Where does it not, and what should change?
+
+### Scope and method
+
+- **Pages compared** — Every route in `routes/AppRoutes.tsx`: Dashboard, Hotels list / add / detail / edit, Room types list / add / edit, Base rates, Availability, the 403/404 access page, plus the Login page, the app boot screen (`App.tsx`) and the layout shell (`layout/AppLayout.tsx`, `Sidebar.tsx`, `Topbar.tsx`). Components were followed through their imports, including modals and workspace tabs.
+- **Reference** — `pages/hotels/HotelsPage.tsx`, `pages/hotels/components/*`, `HotelCreatePage.tsx`, `HotelEditPage.tsx`, the live `features/hotels/*` files (`HotelWorkspace`, `HotelSetupChecklist`, `HotelDetailsFields`, `HotelCreateForm`, `CancellationPolicyFields`, `HotelMediaGalleryManager`, `PhotoModal`, `PublishBlockersInfo`, `HotelRoomsList`), the tokens in `src/styles.css` (`src/dashboard.css` is an empty "deprecated" stub), `apps/admin-web/docs/ui-decisions.md`, `docs/components.md` and `src/components/ui/*`.
+- **Method** — Read the JSX and class lists, then used searches for counts (raw hex, raw Tailwind palette, `<button>`, headings, icon sizes, native controls). Grouped by the ui-architect consistency checks (duplicated UI, missing shared parts, raw colours, two ways of doing one thing, density drift). Nothing was run in a browser; findings only cover what the code shows.
+- **Paths** — Code paths below are relative to `apps/admin-web/src/` unless they start with `apps/` or `docs/`.
+- **Not audited (no route imports them)** — `features/hotels/HotelForm.tsx`, `HotelCreateModal.tsx`, `HotelMediaModal.tsx`, `PhotoEditModal.tsx`, `PhotoUploadPopup.tsx`, `features/hotels/workspace/*`, `pages/hotels/components/HotelDetailsModal.tsx`, and the shared `KpiStrip`, `ImageUploadDropzone`, `Skeleton`. They look like dead code; removing them needs your confirmation (AGENTS.md).
+- **Finding format** — **ID · Title** (Impact) — where (file:line) · what differs from the hotel theme · fix. Impact: **High** = clearly looks different to users or breaks a UI rule in `ui-decisions.md`; **Medium** = noticeable; **Low** = minor.
+
+### Summary
+
+- **Overall consistency: 6.5 / 10.** The shared primitives (`Button`, `Field`, `Input`, `Select`, `Modal`, `DataTable`, `EmptyState`, `Alert`, `MetricCard`) are used on most screens, so the base look holds. The drift is in page headers, containers, hand-built buttons and toggles, modal conventions, and colour: Tailwind `slate-*` and raw accent palettes are used far more than the brand tokens.
+- **Scores by area**
+  - **Hotels (reference) — 8 / 10** — Coherent, but the list header and "Add a hotel" button are hand-built with raw hex, and section headings and modal footers vary.
+  - **Hotel detail (`/admin/hotels/:id`) — 6.5 / 10** — Built from scratch: custom header, narrower page width, hand-built empty state, Title Case headings.
+  - **Dashboard — 5.5 / 10** — Custom header and table, four rainbow-coloured quick-action cards, hand-built text buttons, different metric colours.
+  - **Room types (list / add / edit) — 6.5 / 10** — Uses the shared form and table; but active room types show an amber "draft-style" pill, the heading action is wired the wrong way, and the empty-state button is hand-built.
+  - **Rates — 6 / 10** — The rate card uses amber as its main colour, is not in the standard container, and its Save button is left-aligned with no footer.
+  - **Availability — 5 / 10** — The calendar floats outside a card with raw colours, and the adjust modal hand-builds a toggle, error box, label and coloured tiles.
+  - **Login — 6 / 10** — A standalone layout is fine, but the brand panel uses a raw emerald gradient and a different logo colour from the app.
+  - **Access / error / boot — 6 / 10** — Link styled by hand as a button; the boot screen's CSS classes no longer exist, so it shows unstyled.
+  - **Layout shell — 7.5 / 10** — On-brand sidebar; small raw-colour leftovers in the topbar.
+- **Counts by impact (77 findings)** — **High: 4** · **Medium: 30** · **Low: 43**.
+- **Top 8 issues**
+  1. **Active room types show an amber "draft" pill** (High) — `pages/catalog/views/RoomTypesView.tsx:48` renders `<Status status={room.status} />` (pill by default); `components/ui/Status.tsx:70` has no `ACTIVE`/`DISABLED` entry, so it falls back to the amber `DRAFT` style with a clock icon. The workspace shows the same rooms as green dots (`features/hotels/HotelRoomsList.tsx:52`).
+  2. **"Add a hotel" is a hand-built raw-hex button** (High, inside the reference) — `pages/hotels/HotelsPage.tsx:388-395` and `:433-440` use `<button className="… bg-[#164e3f] hover:bg-[#123e32] … h-[40px] font-bold rounded-xl">` instead of `<Button variant="primary">` (`bg-brand-primary`, 42px). Primary green is a different shade here than on every other page.
+  3. **Dashboard quick actions are rainbow cards** (High) — `pages/dashboard/DashboardPage.tsx:190-251`: four copies of a hand-built card, each with its own palette (emerald, sky, amber, teal). Nothing in the hotel theme uses sky or teal.
+  4. **Inventory adjust modal ignores the shared parts** (High) — `pages/catalog/components/InventoryAdjustModal.tsx:130-165` hand-built segmented toggle (rule: Tabs), `:167-172` hand-built error box (should be `Alert`), `:175-187` raw `<label>` (should be `Field`), `:110-125` emerald / orange / blue stat tiles.
+  5. **Four different page-header patterns** (Medium, ×4) — Hand-built headers on Hotels list (`HotelsPage.tsx:365-398`), Dashboard (`DashboardPage.tsx:54-74`) and Hotel detail (`HotelDetailPage.tsx:114-157`); Room types pages put `PageHeading` inside an extra flex row with the action as a sibling (`RoomTypesPage.tsx:47-65`) instead of using its `action` prop like `HotelEditPage.tsx:56-65`.
+  6. **Modals have no single convention** (Medium) — Short confirmation forms open as right-side drawers (default `variant`), while photo editing opens as a centred dialog; the Cancel button is `outline`, `secondary` or `ghost` depending on the file; footers sit inside the body, not in `Modal`'s `footer` slot.
+  7. **Colour drift: Tailwind slate and raw palettes instead of tokens** (Medium) — `slate-*` appears 581 times vs about 26 uses of the `ink`/`line`/`paper`/`canvas` tokens. Raw hex lives in `MetricCard` (30), `Status` (20), `HotelsPage` (7) and `Topbar` (4). Amber means "needs setup" in the hotel theme but is the main colour of the rate card.
+  8. **Containers and section headings vary** (Medium) — The reference wraps page content in a `rounded-2xl` white card and uses two section-heading styles; the rate card is `rounded-xl max-w-xl`, the availability calendar has no card, the Dashboard cards are `rounded-xl p-5`, and headings range from `text-xs` uppercase grey to `text-lg` bold.
+
+### The reference theme (derived spec)
+
+- **Page shell** — Canvas `bg-canvas` (`#eef5f0`), content in `max-w-[1600px] p-4 sm:p-5 lg:p-6` (`layout/AppLayout.tsx:57`). Page root `space-y-6` (`HotelCreatePage.tsx:22`, `HotelEditPage.tsx:55`, `HotelsPage.tsx:363`). Full width; no per-page `max-w`.
+- **Page heading** — `PageHeading` (`components/ui/PageHeading.tsx`): eyebrow `text-xs font-bold uppercase tracking-wider text-slate-400` in CAPS ("NEW HOTEL", "EDIT HOTEL"), title `h1 text-2xl md:text-3xl font-bold text-slate-900 tracking-tight`, description `text-xs md:text-sm text-slate-500`, actions in the `action` slot, aligned to the bottom (`md:items-end`), `mb-5`. On edit pages the record name is the title and the action is an outline "Back to …" button (`HotelEditPage.tsx:56-65`).
+- **Containers** — Main page container: `bg-white border border-slate-200/80 rounded-2xl shadow-2xs p-6 sm:p-8` (`features/hotels/HotelCreateForm.tsx:58`, `HotelWorkspace.tsx:376`); lists: `DataTable` (`rounded-2xl shadow-xs`, filters in its `toolbarHeader`). Inner cards: `p-3.5`–`p-4 border border-slate-200/90 rounded-xl bg-white shadow-2xs hover:border-slate-300` (`HotelRoomsList.tsx:34`). Info panels: `bg-slate-50 border border-slate-200 rounded-xl p-3` (`BulkStatusConfirmModal.tsx:61`).
+- **Section headings** — Two styles in use: form group `h4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-4` (`HotelDetailsFields.tsx:223`) and section `h3 text-sm font-bold text-slate-900` + `p text-xs text-slate-500` (`HotelWorkspace.tsx:435-441`). Sections are separated by `pt-6 border-t border-slate-100`.
+- **Forms** — `Field` (label `text-xs font-semibold text-slate-700`, required `*` in rose, hint/error `text-[11px]`), `Input`/`Select` size `md` (`h-9 text-xs rounded-lg bg-slate-50 border-slate-300`, brand focus ring), `Textarea showCount`, `DatePicker`, `MoneyInput`, `ReasonField`, `Checkbox`, `Combobox`. Grid `grid grid-cols-1 sm:grid-cols-2 gap-5`; long fields `fullWidth`. Filter bars use small controls (`size="sm"`) with `text-[10px] font-bold uppercase` labels (`HotelFiltersBar.tsx:56`).
+- **Form footer** — `pt-6 border-t border-slate-100 flex justify-end gap-2/3`; Cancel `outline md`, submit `primary md` with `Check` icon, `isLoading` + `loadingLabel` ("Saving…"); optional helper text or "You have unsaved changes" (`text-xs text-amber-700`) on the left (`HotelCreateForm.tsx:72-90`, `HotelWorkspace.tsx:304-309`).
+- **Buttons** — Always `Button` (`components/ui/Button.tsx`): `primary` (brand green) for the main action, `outline` for Back / Cancel / Manage, `secondary` (pale green) for in-section adds ("Add photo", "Add room type"), `danger` for irreversible confirms. Sizes: `md` (42px) for page/form actions, `sm` (36px) for in-card, toolbar and modal actions. lucide icon via `leftIcon` at 14px (`sm`) or 16px (`md`).
+- **Status** — `Status variant="pill"` for hotel status (`HotelsPage.tsx:318`), `variant="dot"` for room-type status (`HotelRoomsList.tsx:52`). Setup progress via `HotelSetupProgress`.
+- **Metrics** — `MetricCard` in a `grid … xl:grid-cols-5 gap-3.5`, icon 16px, tones `green` (total), `blue` (published), `amber` (needs setup), `red` (paused), `slate` (archived) (`HotelSummaryCards.tsx:11-46`).
+- **States** — Loading: `Loader` centred `py-16` for a page, `LoadingRows` for tables (via `DataTable`). Empty: `EmptyState` (dashed `rounded-xl`, icon in a pale-green circle, title + copy + optional primary action), `compact` inside sections. Errors: `Alert tone="error"` (page) or field errors via `Field`; warnings `Alert tone="warning"` with an icon (`HotelWorkspace.tsx:278-280`). Feedback: `useToast` (top-right stack).
+- **Tabs** — Shared `Tabs` (`variant="pills" size="sm"` for the list/card switch, `HotelFiltersBar.tsx:97-106`); workspace steps use `HotelSetupChecklist` (see R5).
+- **Modals** — `Modal` with `title` + `subtitle`, `closeOnBackdrop={false}` for forms; `ConfirmDialog` for yes/no; footer row `pt-4 border-t border-slate-100 flex justify-end gap-2`, buttons `sm`.
+- **Colour** — Brand: `brand-primary` / `brand-hover` / `brand-pale` / `brand-dark` / `brand-lime` / `brand-border`; neutrals in practice are Tailwind `slate-*`; semantic colours come from `Alert`, `Status`, `Toast` (emerald / amber / rose / sky). Selected / cover = `border-brand-primary ring-2 ring-brand-primary/20` (`HotelCardGrid.tsx:31`, `HotelMediaGalleryManager.tsx:70`).
+- **Typography** — Body DM Sans 15px root; most UI text `text-xs`; card titles `text-sm font-bold`; metric numbers `text-2xl font-extrabold`; codes and slugs `font-mono text-slate-400`; Manrope (`--font-heading`) is declared but unused.
+- **Icons** — lucide-react only; 13–16px inline, 16–20px in chips, 20–32px in empty states.
+- **Copy** — Sentence case for titles, buttons and section headings ("Add a hotel", "Save hotel", "Property details & contact"); CAPS only for eyebrows and table headers.
+
+### Reference cleanup (inconsistencies inside the hotel pages)
+
+- **R1 · Hotels list header is hand-built** (Medium) — `pages/hotels/HotelsPage.tsx:365-398` · custom eyebrow `text-[11px]`, `h1 font-extrabold`, `sm:items-center`, while add/edit use `PageHeading` (`text-xs`, `font-bold`, `md:items-end`). The two heading weights are visible when moving list → edit · Fix: use `PageHeading` with `action`; if extrabold is the desired look, change it once in `PageHeading`.
+- **R2 · "Add a hotel" hand-built with raw hex** (High) — `HotelsPage.tsx:388-395`, `:433-440` · `bg-[#164e3f] hover:bg-[#123e32] h-[40px] font-bold` (not `brand-primary`, 40px next to a 42px Import button) · Fix: `<Button variant="primary" size="md" leftIcon={<Plus size={16} />}>`.
+- **R3 · Button styles overridden with `className`** (Low) — `HotelsPage.tsx:383` (Import: `h-[42px] rounded-xl border-slate-200/90`), `:353` (Manage: `h-8 bg-white border-slate-200 hover:text-emerald-800`) · Fix: plain `variant="outline"`; the card view already does this (`HotelCardGrid.tsx:76`).
+- **R4 · Raw hex on the hotel thumbnail** (Low) — `HotelsPage.tsx:270`, `:288` · `bg-[#dcfce7] text-[#166534]` · Fix: `bg-brand-pale text-brand-primary` as in `HotelCardGrid.tsx:34`.
+- **R5 · Workspace steps are a hand-built tablist** (Medium) — `features/hotels/HotelSetupChecklist.tsx:38-68` · `ui-decisions.md` §6 says page-level tabs use `Tabs`; this one adds a tick/dot and count per step · Fix: extend `Tabs` (status icon + badge are already partly supported) or record this as the documented exception.
+- **R6 · Photo source toggle hand-built** (Low) — `features/hotels/PhotoModal.tsx:152-171` · segmented buttons with own classes · Fix: `Tabs variant="pills" size="sm"`.
+- **R7 · Two section-heading styles** (Medium) — `HotelDetailsFields.tsx:223` and `HotelCreateForm.tsx:66` (`text-xs uppercase text-slate-400`) vs `HotelWorkspace.tsx:435-441` (`text-sm font-bold text-slate-900`); both appear on the same Hotel tab · Fix: one shared `SectionHeading` with a `level` prop (new component).
+- **R8 · Modal footers differ** (Medium) — Cancel is `secondary` (`BulkStatusConfirmModal.tsx:114`), `outline` (`PhotoModal.tsx:314`, `ConfirmDialog.tsx:49`); footers are rendered inside the body although `Modal` has a `footer` slot (`components/ui/Modal.tsx:99-103`) used only by `ConfirmDialog` · Fix: Cancel = `outline sm`, confirm = `primary`/`danger sm`, one footer convention.
+- **R9 · Destructive and warning actions styled by override** (Medium) — `HotelWorkspace.tsx:241` and `PhotoModal.tsx:303` (`ghost` + `text-rose-600 hover:bg-rose-50`); `HotelBulkActionsBar.tsx:55` (`danger` recoloured `bg-amber-800`), `:66` (`secondary` recoloured white) · Fix: add a `danger-ghost` (and possibly `on-dark`) `Button` variant (component change).
+- **R10 · Status pill labels are lower case** (Medium) — `components/ui/Status.tsx:67` uses `humanStatus()` (`utils/helpers.ts:12` lower-cases), and the pill class (`:74`) has no `capitalize` (the dot variant does, `:101`). Pills read "published", "needs setup" everywhere · Fix: add `capitalize` to the pill.
+- **R11 · MetricCard colours are raw hex** (Low) — `components/ui/MetricCard.tsx:25-81` (30 raw values) · Fix: move tones to tokens.
+- **R12 · Setup bar raw colours** (Low) — `pages/hotels/components/HotelSetupProgress.tsx:17` (`bg-emerald-600` / `bg-amber-600`) · Fix: semantic success/warning tokens.
+- **R13 · Docs and tokens disagree** (Low) — `docs/ui-decisions.md:18` says canvas `#f4f6f3`; `styles.css:8` is `#eef5f0` · Fix: update the doc (or the token).
+- **R14 · Heading font unused** (Low) — `styles.css:6` declares Manrope and `ui-decisions.md:11` says headings use it, but no file uses `font-heading` · Fix: apply in `PageHeading`/`Modal`/`SectionHeading`, or drop it from the doc.
+- **R15 · Shared controls use raw slate/rose** (Low) — `components/ui/Field.tsx:25-32`, `Input.tsx:36-39`, `Select.tsx:24-27` · Fix: `ink`/`line`/`danger` tokens (keeps every form consistent if the palette changes).
+
+### Dashboard (`pages/dashboard/DashboardPage.tsx`)
+
+- **D1 · Hand-built page header with a divider** (Medium) — `:54-74` · own eyebrow/title markup plus `pb-2 border-b`, which no other page has · Fix: `PageHeading` with the date and Refresh in `action`.
+- **D2 · Hand-built table** (Medium) — `:113-158` · `rounded-lg` table inside a `rounded-xl` card, row hover `hover:bg-emerald-50/30` (DataTable uses `hover:bg-surface-muted`), header `py-3` vs `py-3.5` · Fix: `DataTable` (no pagination) with the hotel list's columns.
+- **D3 · Hand-built text buttons** (Medium) — `:146-152` ("Open", `text-emerald-700 hover:bg-emerald-100/60`), `:174-176` ("View all") · Fix: `Button variant="ghost" size="sm"` / `outline sm` like "Manage" on the hotels list.
+- **D4 · Rainbow quick-action cards** (High) — `:190-251` · four hand-built cards, each with a different raw palette (emerald, sky, amber, teal) and hover fill · Fix: one `QuickActionCard`/`LinkCard` shared component in brand tokens (new component).
+- **D5 · Section cards smaller radius/padding** (Low) — `:98`, `:181` · `rounded-xl p-5` vs reference container `rounded-2xl p-6` · Fix: shared container class/component.
+- **D6 · Metric tiles differ from the hotels list** (Medium) — `:90-95` · "Published" uses `tone="teal"` (renders green) where Hotels uses `blue` (`HotelSummaryCards.tsx:24`); `sand`/`teal` aliases; icons 18px vs 16px; `grid-cols-4 gap-4` vs `gap-3.5` · Fix: same tones and sizes as `HotelSummaryCards` (or reuse it).
+- **D7 · Retry link via `AsyncButton` alias** (Low) — `:79-86` · underline text inside `Alert`, imported as `AsyncButton` from `ui-feedback.tsx:5` · Fix: `Button variant="ghost" size="sm"`; drop the alias.
+- **D8 · Row icon chip raw emerald** (Low) — `:129` (`bg-emerald-100/70 text-emerald-800`) · Fix: hotel thumbnail pattern (photo or `bg-brand-pale` icon).
+
+### Hotel detail (`pages/hotels/HotelDetailPage.tsx`, route `/admin/hotels/:id`)
+
+- **HD1 · Custom header, status shown twice** (Medium) — `:114-157` (eyebrow + `Status` + `h1`) and again on the hero image `:175` · Fix: `PageHeading` (eyebrow "HOTEL", title = name, actions Back + Manage); one status pill.
+- **HD2 · Narrower page** (Medium) — `:112` `max-w-6xl mx-auto` · every other page is full width · Fix: drop the `max-w`.
+- **HD3 · Hand-built empty state** (Medium) — `:341-345` · centred grey text and icon · Fix: `EmptyState compact` like `HotelRoomsList.tsx:16-21`.
+- **HD4 · Title Case headings** (Low) — `:192`, `:223`, `:245`, `:271`, `:314` ("Room Categories & Accommodations") vs sentence case in the workspace · Fix: sentence case, shared `SectionHeading`.
+- **HD5 · Raw emerald accents** (Low) — cover ring `border-emerald-500 ring-emerald-500/20` (`:199`) vs `border-brand-primary ring-brand-primary/20`; icon chips `bg-emerald-100/70` (`:220`, `:242`, `:268`); price `text-emerald-950` (`:398`) · Fix: brand tokens.
+- **HD6 · Duplicate "no price" badge with different wording** (Low) — `:402` "Pricing unconfigured" vs `features/rates/HotelRatesTab.tsx:189` "No price configured", both hand-built amber boxes · Fix: a shared `Badge tone="warning"` and one label.
+- **HD7 · Room cards tinted** (Low) — `:357` `bg-slate-50/50` vs `bg-white` in `HotelRoomsList.tsx:34` · Fix: same card.
+
+### Room types (`pages/catalog/RoomTypesPage.tsx`, `RoomTypeCreatePage.tsx`, `RoomTypeEditPage.tsx`, `views/RoomTypesView.tsx`, `components/HotelRoomPicker.tsx`, `features/rooms/*`)
+
+- **RT1 · Heading action outside `PageHeading`** (Medium) — `RoomTypesPage.tsx:47-65`, `RoomTypeCreatePage.tsx:32-46`, `RoomTypeEditPage.tsx:62-76` · extra flex wrapper; `PageHeading`'s `mb-5` makes the button sit off-centre against the title block · Fix: pass the button as `action`.
+- **RT2 · Edit page spacing** (Low) — `RoomTypeEditPage.tsx:61` `space-y-1` vs `space-y-6` · Fix: `space-y-6`.
+- **RT3 · Edit title pattern** (Low) — `RoomTypeEditPage.tsx:64-65` "Edit Room Type: {name}" (Title Case, prefix in the title) vs eyebrow "EDIT HOTEL" + name (`HotelEditPage.tsx:57-58`) · Fix: eyebrow "EDIT ROOM TYPE", title = room name.
+- **RT4 · Error-state Back button differs** (Low) — `RoomTypeEditPage.tsx:50` `ghost`, icon 16 vs `outline`, icon 14 (`HotelEditPage.tsx:44`) · Fix: match.
+- **RT5 · Active room types render as amber draft pills** (High) — `views/RoomTypesView.tsx:48` + `components/ui/Status.tsx:70` (no `ACTIVE`/`DISABLED`; API enum `ACTIVE`/`DISABLED` in `apps/api/src/modules/hotels/schemas/room-type.schema.ts:7-9`) · Fix now: `variant="dot"` as in the workspace; better: add room statuses to `Status`.
+- **RT6 · Hand-built empty-state button** (Medium) — `views/RoomTypesView.tsx:87-93` · `px-4 py-2 text-xs` `<button>` · Fix: `Button variant="primary" leftIcon={<Plus/>}`.
+- **RT7 · Sky icon chip** (Low) — `views/RoomTypesView.tsx:21` (`bg-sky-100/70 text-sky-700`) · Fix: brand-pale chip or room photo like `HotelRoomsList`.
+- **RT8 · Status shown as a raw number tile** (Medium) — `RoomTypesPage.tsx:96-102` · `MetricCard value={selectedHotel.status}` prints "DRAFT" as a big number; tones `teal`/`sand` aliases · Fix: show the `Status` pill (e.g. in the picker row) and use the hotel tones.
+- **RT9 · Actions column alignment ignored** (Low) — `views/RoomTypesView.tsx:55` sets `className`, which `Column` doesn't have (`components/ui/DataTable.tsx:9-16`), so the header stays left-aligned · Fix: `align: 'right'`.
+- **RT10 · Row action style** (Low) — `views/RoomTypesView.tsx:58-68` `ghost` "Edit" vs `outline` "Manage" on hotels · Fix: `outline sm`.
+- **RT11 · Property picker is a different filter style** (Medium) — `components/HotelRoomPicker.tsx:211` standalone `rounded-xl border-slate-200` card (hotels put filters in the `DataTable` toolbar); `Field` labels (`text-xs` normal case) vs filter labels (`text-[10px]` uppercase, `HotelFiltersBar.tsx:56`); Refresh is `size="md"` (42px) beside `md` inputs (36px) (`:262-268`) · Fix: small controls and filter-label style; Refresh `sm`. Shared by Room types, Rates and Availability.
+- **RT12 · Card inside a card on "Property not found"** (Low) — `components/HotelRoomPicker.tsx:184-205` wraps `NotFound` (already a bordered card) in another card · Fix: render `NotFound` alone.
+
+### Rates (`pages/catalog/RatesPage.tsx`, `views/BaseRatesView.tsx`, `features/rates/HotelRatesTab.tsx`)
+
+- **RA1 · Rate card container differs** (Low) — `views/BaseRatesView.tsx:45` `max-w-xl rounded-xl border-slate-200 p-6` · Fix: standard container (`rounded-2xl border-slate-200/80`).
+- **RA2 · Amber as the main colour** (Medium) — `views/BaseRatesView.tsx:49` (amber icon chip), `:59-65` (amber "Current rate" panel) · amber means "needs setup / warning" in the hotel theme · Fix: `bg-brand-pale` / neutral panel; keep amber for warnings.
+- **RA3 · Submit button placement** (Medium) — `views/BaseRatesView.tsx:103-117` · left-aligned in the grid, no `border-t` footer, no Cancel · Fix: reference form footer (right-aligned, `pt-6 border-t`).
+- **RA4 · Dollar icon for rupee prices** (Low) — `RatesPage.tsx:191`, nav `routes/route-config.ts:25`, `DashboardPage.tsx:229` use `DollarSign`; the default currency is INR and `BaseRatesView.tsx:50` / `HotelRatesTab.tsx:136` use `IndianRupee` · Fix: one money icon.
+- **RA5 · Extra margin under metrics** (Low) — `RatesPage.tsx:171` (and `InventoryPage.tsx:123`) `mb-7` inside `space-y-6` · Fix: remove `mb-7`.
+- **RA6 · Workspace rates tab details** (Low) — `features/rates/HotelRatesTab.tsx:189` hand-built amber badge; `:216` Title Case modal title "Set Base Rate — …"; `:266` Cancel `ghost` · Fix: `Badge`, sentence case, `outline` Cancel.
+- **RA7 · Rate form duplicated** (Low) — currency list and validation copied (`BaseRatesView.tsx:6` / `HotelRatesTab.tsx:20`; `RatesPage.tsx:79-139` / `HotelRatesTab.tsx:74-130`) · risk of visual drift · Fix: one `BaseRateFields` like `HotelDetailsFields`.
+- **RA8 · No empty/loading state before a room is chosen** (Medium) — `RatesPage.tsx:196-208` (and `InventoryPage.tsx:148-160`) render nothing; the reference always shows `EmptyState`/`Loader` · Fix: `EmptyState` "Choose a property and room type" and a loading state.
+
+### Availability (`pages/catalog/InventoryPage.tsx`, `views/InventoryCalendarView.tsx`, `components/InventoryAdjustModal.tsx`, `features/inventory/HotelAvailabilityTab.tsx`)
+
+- **IN1 · Calendar not in a container** (Medium) — `views/InventoryCalendarView.tsx:29-36` · free-floating `h2 text-lg` on the canvas · Fix: standard container card with a `SectionHeading`.
+- **IN2 · Raw status colours on day cells** (Medium) — `views/InventoryCalendarView.tsx:92` (`text-emerald-600`/`text-rose-600`), `:101` (`text-orange-600`), legend `:39`, `:42` (emerald/slate dots, no red although 0 shows red) · Fix: semantic tokens and a legend that matches.
+- **IN3 · Hand-built warning banner** (Medium) — `views/InventoryCalendarView.tsx:48-65` amber box plus `Button outline` recoloured amber (`:60`) · Fix: `Alert tone="warning"` with a `secondary sm` action.
+- **IN4 · Button turned into a text link** (Medium) — `views/InventoryCalendarView.tsx:104-111` `ghost` with `p-0 h-auto text-emerald-700` · Fix: `Button variant="outline" size="sm"` (or a shared link style).
+- **IN5 · Fake info icon** (Low) — `views/InventoryCalendarView.tsx:126` "i" in a grey circle · Fix: lucide `Info` or `Alert tone="info"`.
+- **IN6 · Adjust modal hand-builds toggle, error, label and tiles** (High) — `components/InventoryAdjustModal.tsx:130-165` (toggle; rule §6), `:167-172` (error box), `:175-187` (raw `<label>`; rule §3 Field), `:110-125` (emerald/orange/blue tiles), Title Case title `:101` and buttons `:146`, `:163`, `:220`, Cancel `secondary` `:206` · Fix: `Tabs pills`, `Alert`, `Field`, a shared `StatTile`, sentence case, `outline` Cancel.
+- **IN7 · Workspace availability step mixes warning styles** (Low) — `features/inventory/HotelAvailabilityTab.tsx:123` plain amber text vs `Alert tone="warning"` on the Rates step (`HotelRatesTab.tsx:150`); inline status text `:141-144` instead of `Status`/badge · Fix: `Alert`, `Badge`.
+
+### Login (`pages/auth/LoginPage.tsx`)
+
+- **L1 · Brand panel off-token** (Medium) — `:51-63` `from-emerald-950 via-emerald-900 to-slate-950`, logo `bg-emerald-400 text-emerald-950`; the app logo is `bg-brand-primary text-white` (`layout/Sidebar.tsx:43`) · Fix: `brand-darkest`/`brand-dark`/`brand-lime` tokens and the same logo mark.
+- **L2 · Page base colour** (Low) — `:49` `bg-slate-900` · Fix: token.
+- **L3 · Input/button height mismatch** (Low) — inputs `size="lg"` (44px, `:106`, `:119`) vs button `md` (42px, `:133`) · Fix: both `lg` or both `md`.
+- **L4 · `AsyncButton` alias** (Low) — `:5`, `:130` · Fix: import `Button`.
+
+### Access, error and boot screens
+
+- **A1 · Link styled by hand as a button** (Medium) — `pages/error/AccessPage.tsx:28-33` and `components/ui/NotFound.tsx:28-33` (`px-4/5 py-2/2.5 text-xs`, not the 42px `Button`) · Fix: a `ButtonLink` (or `Button` + `navigate`).
+- **A2 · Heavier shadow** (Low) — `AccessPage.tsx:8` `shadow-xl` vs `shadow-2xs` · Fix: match containers.
+- **A3 · Raw icon chips** (Low) — `AccessPage.tsx:10-12` `bg-amber-100/70` / `bg-emerald-100/70` · Fix: tokens.
+- **A4 · Boot screen is unstyled** (Medium) — `App.tsx:14-19` uses `boot-screen`, `brand-mark` and `ui-spinner` (`components/ui/Spinner.tsx:4`); no CSS defines them (`dashboard.css:1` is empty, `styles.css` has none), so every app load shows bare text top-left · Fix: Tailwind classes (centred, brand mark) or reuse `Loader`.
+- **A5 · Error boundary card** (Low) — `components/ui/ErrorBoundary.tsx:53-78` `shadow-sm`, `font-semibold` heading, Title Case "Try Again" / "Reload App" · Fix: match `EmptyState`/containers, sentence case.
+
+### Layout shell (`layout/*`)
+
+- **S1 · Raw hex avatar** (Low) — `Topbar.tsx:108`, `:128` `bg-[#dcfce7] text-[#166534]` · Fix: `bg-brand-pale text-brand-primary`.
+- **S2 · Raw emerald toggle state** (Low) — `Topbar.tsx:57` `bg-emerald-50 border-emerald-200/60` · Fix: `bg-brand-pale border-brand-border` (as the active nav item, `Sidebar.tsx:177`).
+- **S3 · Sky help chip** (Low) — `Sidebar.tsx:115` `bg-sky-100/70 text-brand-primary` · Fix: `bg-brand-pale`.
+- **S4 · Permanent red notification dot** (Low) — `Topbar.tsx:94` always shows a dot while the click says "No new notifications" (`:91`) · Fix: show only when there are notifications.
+- **S5 · Header and content edges don't line up** (Low) — `Topbar.tsx:39` `px-6 md:px-8` vs content `p-4 sm:p-5 lg:p-6` (`AppLayout.tsx:57`) · Fix: same horizontal padding.
+
+### Cross-cutting issues
+
+- **Colours / tokens**
+  - **X1 · Slate instead of tokens** (Medium) — 581 `slate-*` uses vs about 26 token uses (`ink`, `ink-muted`, `line`, `paper`, `canvas`, `surface-muted`, `line-subtle`). The tokens are greenish greys; slate is a cool grey, so pages mix two neutral families · Fix: decide one (recommend mapping to tokens) and record it in `ui-decisions.md`.
+  - **X2 · No semantic colour tokens** (Medium) — success/warning/info come from raw emerald/amber/sky inside each component (`Alert.tsx:12-24`, `Status.tsx:15-56`, `Toast.tsx:15-19`, `EmptyState.tsx:26`, `ConfirmDialog.tsx:80`), and pages add orange (`InventoryAdjustModal.tsx:118`, `InventoryCalendarView.tsx:101`), blue (`InventoryAdjustModal.tsx:122`), teal/sky (`DashboardPage.tsx:211-244`) · Fix: `--color-success/warning/info` (+ pale/border) tokens.
+  - **Raw hex** — live files: `MetricCard.tsx` (30), `Status.tsx` (20), `HotelsPage.tsx` (7), `Topbar.tsx` (4) — covered by R2, R4, R10/R11, S1.
+- **Typography** — Two h1 weights (`font-bold` in `PageHeading.tsx:26`, `font-extrabold` in `HotelsPage.tsx:370`, `DashboardPage.tsx:57`, `HotelDetailPage.tsx:123`); section headings in five sizes (`text-xs` uppercase, `text-sm`, `text-base`, `text-lg` in `InventoryCalendarView.tsx:32` / `HotelDetailPage.tsx:314`, `text-xl` modal titles); Manrope unused (R14).
+  - **X3 · Title Case vs sentence case** (Low) — "Publish Selected" (`HotelBulkActionsBar.tsx:46`), "Confirm Block" (`InventoryAdjustModal.tsx:220`), "Set Base Rate" (`HotelRatesTab.tsx:216`), "Try Again" (`ErrorBoundary.tsx:70`), "Edit Room Type:" (`RoomTypeEditPage.tsx:65`) vs the hotel workspace's sentence case · Fix: sentence case everywhere except eyebrows/table headers.
+- **Buttons** — Hand-built action `<button>`s: `HotelsPage.tsx` (2), `RoomTypesView.tsx` (1), `DashboardPage.tsx` (6), `InventoryAdjustModal.tsx` (2), plus link-buttons in `AccessPage.tsx` and `NotFound.tsx`. `Button` colours overridden with `className` in `HotelsPage.tsx:353,383`, `HotelBulkActionsBar.tsx:55,66`, `HotelWorkspace.tsx:241`, `PhotoModal.tsx:303`, `InventoryCalendarView.tsx:60,107`, `DashboardPage.tsx:69`. The `AsyncButton` alias is still used in 2 pages. (Icon-only and menu buttons in the layout, gallery and pop-overs are fine.)
+- **Forms** — `Field` is used everywhere except `InventoryAdjustModal.tsx:175` and `BulkStatusConfirmModal.tsx:86`. Grid gap is `gap-5` in the reference but `gap-4` in `BaseRatesView.tsx:68` and compact `RoomTypeFields.tsx:122`. No native date/checkbox/select/file controls on screen (only hidden inputs) — rule §7 holds.
+- **States** — Loading: `Loader`, `LoadingRows`, plain "Loading…" text (`HotelAvailabilityTab.tsx:150`) or nothing (RA8). Empty: `EmptyState`, hand-built (HD3) or nothing (RA8). Errors: `Alert`, the `DataTable` inline rose line (`DataTable.tsx:67-69`) and a hand-built box (IN6).
+- **Modals**
+  - **X4 · Drawer vs dialog chosen ad hoc** (Medium) — `Modal` defaults to a right-side drawer (`Modal.tsx:36`), so short confirmations and 3-field forms open as full-height drawers (`BulkStatusConfirmModal.tsx:56`, `InventoryAdjustModal.tsx:99`, `HotelRatesTab.tsx:215`), while photo editing (`PhotoModal.tsx:127`) and `ConfirmDialog` (`ConfirmDialog.tsx:43`) are centred dialogs · Fix: a written rule (e.g. dialog for confirmations and short forms, drawer for long forms) and apply it.
+  - Footers and Cancel variants — see R8; Title Case modal titles — see X3.
+- **Icons**
+  - **X5 · No icon size scale** (Low) — 17 different sizes (10–40px); `leftIcon` ranges from 12 (`HotelRatesTab.tsx:201`) to 17 (`HotelsPage.tsx:393`); metric icons 16 (Hotels) vs 18 (others); money icon mixes `DollarSign` and `IndianRupee` (RA4) · Fix: document 14 (sm buttons/inline), 16 (md buttons, chips), 20 (empty states compact), 32 (empty states).
+- **Spacing** — Page roots are `space-y-6` except `RoomTypeEditPage.tsx:61` (`space-y-1`) and `HotelDetailPage.tsx:112` (`space-y-6 sm:space-y-8`); extra `mb-7` under metrics (RA5); card padding ranges `p-3.5` to `p-8`.
+- **Dark mode / raw hex**
+  - **X6 · No dark theme groundwork** (Low) — no dark tokens; raw hex and raw palette classes would each need a manual dark variant · Fix: only relevant if dark mode is planned; token work in X1/X2 is the prerequisite.
+
+### Recommended fix plan
+
+- **Quick wins (no new component, no token change)**
+  1. **Room status pill** — `RoomTypesView.tsx:48` → `variant="dot"` (RT5).
+  2. **Replace hand-built buttons with `Button`** — R2, R3, D3, RT6, and remove colour overrides where a stock variant fits (IN3, IN4).
+  3. **Headers** — use `PageHeading` on Hotels list, Dashboard and Hotel detail; pass Room types actions via `action`; fix edit title pattern and spacing (R1, D1, HD1, RT1-RT4).
+  4. **Use existing shared parts** — `Alert` for IN3, IN6 error, IN7; `Tabs pills` for IN6 and R6; `Field` in IN6; `EmptyState` for HD3 and RA8.
+  5. **Containers** — wrap the availability calendar and rate card in the standard `rounded-2xl` container; Dashboard cards to `rounded-2xl p-6`; drop `max-w-6xl` and `mb-7` (IN1, RA1, D5, HD2, RA5).
+  6. **Modal conventions** — Cancel `outline sm`, confirm right; sentence-case titles (R8, X3, RA6).
+  7. **Raw hex → brand tokens** in `HotelsPage`, `Topbar`, `Sidebar` (R4, S1-S3); rate card off amber (RA2); Dashboard metric tones match the hotels list (D6).
+  8. **Boot screen** — style it or reuse `Loader` (A4); add `capitalize` to the status pill (R10, a one-class change in a shared component).
+- **Larger work — needs your approval (new shared component or token change, per `ui-decisions.md` / ui-architect rules)**
+  - **Tokens** — add semantic `success/warning/info` (+ pale/border) tokens; decide slate vs `ink`/`line` and migrate shared components first (`Field`, `Input`, `Select`, `Status`, `MetricCard`, `Alert`, `Toast`); fix the canvas value in the doc; decide on Manrope (X1, X2, R11-R15).
+  - **New shared components** — `SectionHeading` (R7, HD4, IN1), page `Card`/container (D5, RA1, IN1), `QuickActionCard`/`LinkCard` (D4), `StatTile` (IN6, hotel detail policy tiles), `Badge` (HD6, RA6, IN7, code chips), `ButtonLink` or `Button asChild` (A1).
+  - **Changes to existing shared components** — `Button`: `danger-ghost` (and maybe `on-dark`) variants (R9); `Status`: `ACTIVE`/`DISABLED` and capitalised pills (RT5, R10); `PageHeading`: settle weight/eyebrow size (R1); `MetricCard`: drop `teal`/`sand` aliases (D6, RT8); `Modal`: drawer/dialog rule and footer convention (X4, R8); `Tabs`: step mode with status icon + count so `HotelSetupChecklist` can use it (R5).
+  - **Page rebuilds** — Dashboard table → `DataTable` and quick actions → new card (D2, D4); InventoryAdjustModal on shared parts (IN6); shared `BaseRateFields` for both rate screens (RA7); decide whether `HotelDetailPage` stays (it overlaps the workspace) before restyling it.
+  - **Dead code** — remove the unused hotel modals/forms and `workspace/*` listed in Scope so they cannot drift back in (file deletion needs your confirmation).

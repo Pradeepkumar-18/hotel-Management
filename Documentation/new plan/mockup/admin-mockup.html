@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Staywise Admin Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* Tokens: current hotel theme (apps/admin-web/src/styles.css) + UI-PLAN proposals (muted text T-06, semantic surfaces). */
+  :root {
+    --brand: #1e6354; --brand-hover: #164d42; --brand-pale: #e9f3ee; --brand-dark: #173f36; --brand-lime: #d6ef9e;
+    --canvas: #f4f6f3; --paper: #ffffff; --line: #e4e9e3; --ink: #1c2622; --muted: #65736c;
+    --ok: #047857; --ok-bg: #ecfdf5; --warn: #b45309; --warn-bg: #fffbeb; --bad: #be123c; --bad-bg: #fff1f2;
+    --info: #0369a1; --info-bg: #f0f9ff; --grey-bg: #f1f5f9; --grey: #475569;
+    --radius: 14px; --radius-sm: 9px; --shadow: 0 1px 2px rgba(16,24,20,.06);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "DM Sans", system-ui, sans-serif; font-size: 14px; color: var(--ink); background: var(--canvas); }
+  h1, h2, h3, h4 { font-family: Manrope, "DM Sans", sans-serif; margin: 0; }
+  button { font: inherit; cursor: pointer; }
+  a { color: var(--brand); text-decoration: none; }
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar { background: var(--brand-dark); color: #dfe9e4; padding: 18px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-family: Manrope; font-weight: 800; font-size: 17px; color: #fff; padding: 4px 8px 18px; }
+  .logo span { width: 30px; height: 30px; border-radius: 9px; background: var(--brand-lime); color: var(--brand-dark); display: grid; place-items: center; font-size: 15px; }
+  .nav-group { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #9db7ad; padding: 14px 10px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; color: #dfe9e4; background: none; border: 0; width: 100%; text-align: left; }
+  .nav-item:hover { background: rgba(255,255,255,.07); }
+  .nav-item.active { background: rgba(214,239,158,.16); color: #fff; font-weight: 600; }
+  .nav-item .ico { width: 18px; text-align: center; opacity: .9; }
+  .nav-sub { padding-left: 28px; font-size: 13px; }
+  .sidebar .foot { margin-top: auto; font-size: 12px; color: #9db7ad; padding: 10px; }
+
+  /* Top bar */
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 12px 24px; background: var(--paper); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  .switcher { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--canvas); font-weight: 600; min-width: 220px; }
+  .switcher small { color: var(--muted); font-weight: 500; }
+  .search { flex: 1; max-width: 420px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: #fbfcfb; }
+  .kbd { margin-left: auto; font-size: 11px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; background: #fff; }
+  .spacer { flex: 1; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--brand-pale); color: var(--brand); display: grid; place-items: center; font-weight: 700; }
+
+  /* Buttons, chips, badges */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 600; font-size: 13px; }
+  .btn:hover { border-color: #c9d3cc; }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.primary:hover { background: var(--brand-hover); }
+  .btn.ghost { border-color: transparent; background: none; }
+  .btn.danger { color: var(--bad); }
+  .btn.sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+  .b-ok { background: var(--ok-bg); color: var(--ok); border-color: #a7f3d0; }
+  .b-warn { background: var(--warn-bg); color: var(--warn); border-color: #fde68a; }
+  .b-bad { background: var(--bad-bg); color: var(--bad); border-color: #fecdd3; }
+  .b-info { background: var(--info-bg); color: var(--info); border-color: #bae6fd; }
+  .b-grey { background: var(--grey-bg); color: var(--grey); border-color: #e2e8f0; }
+  .b-quiet { color: var(--ok); }
+
+  /* Layout primitives */
+  .page { padding: 22px 24px 48px; display: none; }
+  .page.active { display: block; }
+  .heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .heading h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+  .heading p { margin: 4px 0 0; color: var(--muted); }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card-pad { padding: 18px; }
+  .section-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .muted { color: var(--muted); }
+  .grid { display: grid; gap: 14px; }
+  .g4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .g2 { grid-template-columns: 1.4fr 1fr; }
+  .stat .label { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  .stat .value { font-family: Manrope; font-size: 28px; font-weight: 800; margin-top: 6px; }
+  .stat .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .list-row { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); }
+  .list-row:first-of-type { border-top: 0; }
+  .note { font-size: 12px; color: var(--muted); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 11px 14px; background: #f8faf8; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tr.click:hover td { background: #fafcfa; cursor: pointer; }
+  tr.selected td { background: var(--brand-pale); }
+  .thumb { width: 44px; height: 34px; border-radius: 8px; background: linear-gradient(135deg,#cfe3d9,#9ec5b3); flex-shrink: 0; }
+  .thumb.empty { background: var(--grey-bg); display: grid; place-items: center; color: var(--grey); font-size: 10px; }
+  .name { font-weight: 700; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .input { padding: 8px 11px; border: 1px solid #cfd8d2; border-radius: 9px; background: #fbfcfb; min-width: 160px; }
+  .seg { display: inline-flex; padding: 3px; background: var(--grey-bg); border-radius: 10px; }
+  .seg button { border: 0; background: none; padding: 5px 12px; border-radius: 8px; font-weight: 600; font-size: 12.5px; color: var(--grey); }
+  .seg button.on { background: #fff; color: var(--ink); box-shadow: var(--shadow); }
+
+  /* Workspace tabs + checklist */
+  .ws-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .tabs { display: flex; gap: 4px; padding: 0 12px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tab { border: 0; background: none; padding: 12px 12px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tab.on { color: var(--brand); border-color: var(--brand); }
+  .tab .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; margin-right: 6px; vertical-align: middle; }
+  .tab .tick { color: var(--ok); margin-right: 6px; }
+  .ws-body { padding: 18px; }
+  .info-pop { position: relative; display: inline-flex; }
+  .info-pop .pop { display: none; position: absolute; right: 0; top: 34px; width: 290px; padding: 12px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.12); z-index: 10; font-size: 12.5px; }
+  .info-pop:hover .pop, .info-pop:focus-within .pop { display: block; }
+  .meter { height: 8px; background: var(--grey-bg); border-radius: 99px; overflow: hidden; }
+  .meter > div { height: 100%; background: var(--brand); border-radius: 99px; }
+
+  /* Side panel */
+  .split { display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }
+  .panel { position: sticky; top: 76px; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .panel-tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--line); }
+  .panel-tabs button { border: 0; background: none; padding: 10px 8px; font-weight: 600; font-size: 12.5px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .panel-tabs button.on { color: var(--brand); border-color: var(--brand); }
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .field label { font-size: 12px; font-weight: 600; }
+  .field .hint { font-size: 11px; color: var(--muted); }
+  .money { display: flex; align-items: center; border: 1px solid #cfd8d2; border-radius: 9px; background: #fbfcfb; }
+  .money span { padding: 0 10px; color: var(--muted); font-weight: 600; }
+  .money input { border: 0; background: none; padding: 8px 8px 8px 0; font: inherit; width: 100%; outline: none; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Inventory grid */
+  .gridwrap { overflow-x: auto; }
+  .inv { border-collapse: separate; border-spacing: 0; min-width: 900px; }
+  .inv th, .inv td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; padding: 6px 4px; font-size: 12px; }
+  .inv th:first-child, .inv td:first-child { position: sticky; left: 0; background: #fff; text-align: left; min-width: 170px; padding-left: 14px; z-index: 1; }
+  .inv thead th { background: #f8faf8; text-transform: none; letter-spacing: 0; font-size: 11.5px; }
+  .inv thead th.wknd { background: #f1f5f2; }
+  .cell { line-height: 1.25; border-radius: 6px; padding: 3px 0; }
+  .cell b { display: block; font-size: 12px; }
+  .cell small { color: var(--muted); font-size: 10.5px; }
+  .cell.sel { background: var(--brand-pale); outline: 2px solid var(--brand); }
+  .cell.closed { background: repeating-linear-gradient(45deg,#fff1f2,#fff1f2 4px,#ffe4e6 4px,#ffe4e6 8px); }
+  .cell.closed b { color: var(--bad); }
+  .cell.low small { color: var(--warn); font-weight: 600; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 10px 14px; }
+  .bulk { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; padding: 14px; background: var(--brand-pale); border-top: 1px solid var(--line); border-radius: 0 0 var(--radius) var(--radius); }
+
+  /* Booking detail + new booking */
+  .kv { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; font-size: 13px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; font-weight: 600; }
+  .lines td { padding: 8px 0; border: 0; font-size: 13px; }
+  .lines tr.total td { border-top: 1px solid var(--line); font-weight: 800; padding-top: 10px; }
+  .timeline { list-style: none; margin: 0; padding: 0; }
+  .timeline li { display: flex; gap: 10px; padding: 8px 0; font-size: 13px; }
+  .timeline li::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--brand); margin-top: 5px; flex-shrink: 0; }
+  .steps { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .step { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; background: #fff; border: 1px solid var(--line); font-weight: 600; color: var(--muted); }
+  .step.on { border-color: var(--brand); color: var(--brand); background: var(--brand-pale); }
+  .step.done { color: var(--ok); }
+  .step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--grey-bg); font-size: 12px; }
+  .step.on i { background: var(--brand); color: #fff; }
+  .room-opt { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; }
+  .room-opt.on { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(30,99,84,.12); }
+  .hold { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 9px; background: var(--info-bg); color: var(--info); font-weight: 600; font-size: 12.5px; }
+
+  /* Hotel cards */
+  .hcards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; padding: 14px; }
+  .hcard { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #fff; }
+  .hcard .img { height: 120px; background: linear-gradient(135deg,#2c7a68,#9fd0b9); position: relative; }
+  .hcard .img.b { background: linear-gradient(135deg,#7aa6c2,#c8dde8); }
+  .hcard .img.c { background: var(--brand-pale); display: grid; place-items: center; color: var(--brand); font-size: 28px; }
+  .hcard .img .badge { position: absolute; top: 10px; right: 10px; }
+  .hcard .body { padding: 12px 14px; }
+  .hcard .foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .mock-note { margin: 0 24px; padding: 8px 12px; border-radius: 10px; background: #fffbeb; color: #92400e; font-size: 12px; border: 1px dashed #fcd34d; }
+
+  @media (max-width: 1100px) { .g4 { grid-template-columns: repeat(2,1fr); } .split, .g2 { grid-template-columns: 1fr; } .panel { position: static; } .hcards { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 760px) { .app { grid-template-columns: 1fr; } .sidebar { display: none; } .g3, .g4, .hcards { grid-template-columns: 1fr; } .switcher { min-width: 0; } .search { display: none; } .page { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar" aria-label="Main navigation">
+    <div class="logo"><span>S</span>Staywise</div>
+    <button class="nav-item active" data-go="today"><span class="ico">◉</span>Today</button>
+    <button class="nav-item" data-go="bookings"><span class="ico">📅</span>Bookings</button>
+    <div class="nav-group">Properties</div>
+    <button class="nav-item" data-go="hotels"><span class="ico">🏨</span>Hotels</button>
+    <button class="nav-item nav-sub" data-go="overview">Overview</button>
+    <button class="nav-item nav-sub" data-go="rooms">Rooms &amp; rates</button>
+    <button class="nav-item nav-sub" data-go="inventory">Prices &amp; availability</button>
+    <div class="nav-group">Admin</div>
+    <button class="nav-item" data-go="audit"><span class="ico">🧾</span>Audit log</button>
+    <button class="nav-item" data-go="today"><span class="ico">⚙️</span>Settings</button>
+    <div class="foot">Mockup · new plan P1–P6<br/>Not connected to data</div>
+  </aside>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+    <header class="topbar">
+      <div class="switcher" title="Global hotel switcher — hotel comes from the URL; hidden for single-hotel users">
+        🏨 Bell Hotel <small>· Sivakasi</small> <span style="margin-left:auto">▾</span>
+      </div>
+      <div class="search">🔍 Search bookings, guests, hotels… <span class="kbd">Ctrl K</span></div>
+      <div class="spacer"></div>
+      <button class="btn primary" data-go="newbooking">+ New booking</button>
+      <div class="avatar" title="Super admin">PK</div>
+    </header>
+    <p class="mock-note" style="margin-top:14px">Clickable mockup of the new plan (UI-PLAN / UX-PLAN). Sample data only. Use the sidebar, tabs and buttons to move between screens.</p>
+
+    <!-- ===== TODAY ===== -->
+    <section class="page active" id="today">
+      <div class="heading">
+        <div><div class="eyebrow">Today · Tue 20 Oct</div><h1>Good morning, Pradeep</h1><p>Bell Hotel · Asia/Kolkata</p></div>
+        <div><button class="btn">View all arrivals</button></div>
+      </div>
+      <div class="grid g4">
+        <div class="card card-pad stat"><div class="label">Arrivals</div><div class="value">12</div><div class="sub">4 still to check in</div></div>
+        <div class="card card-pad stat"><div class="label">Departures</div><div class="value">9</div><div class="sub">2 still to check out</div></div>
+        <div class="card card-pad stat"><div class="label">In-house</div><div class="value">41</div><div class="sub">guests in 22 rooms</div></div>
+        <div class="card card-pad stat"><div class="label">Occupancy tonight</div><div class="value">78%</div><div class="sub">22 of 28 rooms sold</div></div>
+      </div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card">
+          <div class="card-pad" style="padding-bottom:6px"><div class="section-title">Needs attention <span class="badge b-warn">3</span></div><div class="note">Ranked by severity. Each item links to the fix.</div></div>
+          <div class="list-row"><span class="badge b-bad">High</span><div style="flex:1"><b>Suite has no price</b><div class="note">Guests can't book this room type</div></div><button class="btn sm" data-go="rooms">Set price</button></div>
+          <div class="list-row"><span class="badge b-warn">Medium</span><div style="flex:1"><b>Deluxe King: no open dates after 30 Nov</b><div class="note">Bookings stop in 41 days</div></div><button class="btn sm" data-go="inventory">Open dates</button></div>
+          <div class="list-row"><span class="badge b-info">Low</span><div style="flex:1"><b>Only 3 hotel photos</b><div class="note">10+ photos recommended</div></div><button class="btn sm" data-go="overview">Add photos</button></div>
+        </div>
+        <div class="card">
+          <div class="card-pad" style="padding-bottom:6px"><div class="section-title">Arrivals today</div></div>
+          <div class="list-row"><span class="mono">14:00</span><div style="flex:1"><b>R. Kumar</b><div class="note">Deluxe King × 1 · 2 nights</div></div><span class="badge b-ok">✓ Checked in</span></div>
+          <div class="list-row"><span class="mono">15:30</span><div style="flex:1"><b>A. Shah</b><div class="note">Suite × 1 · 1 night</div></div><button class="btn sm">Check in</button></div>
+          <div class="list-row"><span class="mono">18:00</span><div style="flex:1"><b>M. Iyer</b><div class="note">Standard × 2 · 3 nights</div></div><span class="badge b-info">Pay at hotel</span></div>
+        </div>
+      </div>
+      <div class="card card-pad" style="margin-top:14px">
+        <div class="section-title">Next 14 days · rooms free per night</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:80px;margin-top:10px">
+          <div style="flex:1;height:30%;background:var(--brand-pale);border-radius:6px"></div><div style="flex:1;height:45%;background:var(--brand-pale);border-radius:6px"></div><div style="flex:1;height:70%;background:#bfe0d1;border-radius:6px"></div><div style="flex:1;height:90%;background:#8fc7af;border-radius:6px"></div><div style="flex:1;height:60%;background:#bfe0d1;border-radius:6px"></div><div style="flex:1;height:35%;background:var(--brand-pale);border-radius:6px"></div><div style="flex:1;height:20%;background:#fde68a;border-radius:6px"></div><div style="flex:1;height:25%;background:var(--brand-pale);border-radius:6px"></div><div style="flex:1;height:50%;background:#bfe0d1;border-radius:6px"></div><div style="flex:1;height:75%;background:#8fc7af;border-radius:6px"></div><div style="flex:1;height:80%;background:#8fc7af;border-radius:6px"></div><div style="flex:1;height:55%;background:#bfe0d1;border-radius:6px"></div><div style="flex:1;height:40%;background:var(--brand-pale);border-radius:6px"></div><div style="flex:1;height:30%;background:var(--brand-pale);border-radius:6px"></div>
+        </div>
+        <div class="note" style="margin-top:8px">Amber = fewer than 3 rooms left. <a href="#" data-go="inventory">Open prices &amp; availability →</a></div>
+      </div>
+    </section>
+
+    <!-- ===== HOTELS LIST ===== -->
+    <section class="page" id="hotels">
+      <div class="heading">
+        <div><div class="eyebrow">Properties</div><h1>Hotels</h1><p>Manage hotels, rooms, prices, availability and policies.</p></div>
+        <button class="btn primary">+ Add a hotel</button>
+      </div>
+      <div class="grid g4" style="margin-bottom:14px">
+        <div class="card card-pad stat"><div class="label">Active hotels</div><div class="value">8</div></div>
+        <div class="card card-pad stat"><div class="label">Published</div><div class="value">1</div></div>
+        <div class="card card-pad stat"><div class="label">Needs setup</div><div class="value">7</div></div>
+        <div class="card card-pad stat"><div class="label">Archived</div><div class="value">5</div><div class="sub">Hidden · use the Archived filter</div></div>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <input class="input" style="flex:1;min-width:220px" placeholder="Search by hotel name, city or ID…" />
+          <select class="input"><option>All (excluding archived)</option></select>
+          <select class="input"><option>All locations</option></select>
+          <select class="input"><option>Setup: All</option></select>
+          <div class="seg" role="tablist"><button class="on" data-view="list">☰ List</button><button data-view="cards">▦ Cards</button></div>
+        </div>
+        <div id="hotels-list">
+          <table>
+            <thead><tr><th style="width:36px">☐</th><th>Hotel</th><th>Location</th><th>Status</th><th>Setup progress</th><th>Updated</th><th></th></tr></thead>
+            <tbody>
+              <tr class="click" data-go="overview"><td>☐</td><td><div style="display:flex;gap:10px;align-items:center"><div class="thumb"></div><div><div class="name">Bell Hotel</div><div class="mono">/bell-hotel-111</div></div></div></td><td>Sivakasi, IN</td><td><span class="badge b-ok">● Published</span></td><td style="min-width:170px"><div class="note" style="display:flex;justify-content:space-between"><b style="color:var(--ink)">Ready to publish</b><span>100%</span></div><div class="meter"><div style="width:100%"></div></div></td><td class="note">20 Oct 2026</td><td><button class="btn sm">Manage</button></td></tr>
+              <tr class="click" data-go="overview"><td>☐</td><td><div style="display:flex;gap:10px;align-items:center"><div class="thumb" style="background:linear-gradient(135deg,#7aa6c2,#c8dde8)"></div><div><div class="name">Hotel B Mumbai</div><div class="mono">/hotel-b-mumbai</div></div></div></td><td>Mumbai, IN</td><td><span class="badge b-warn">◐ Draft</span></td><td><div class="note" style="display:flex;justify-content:space-between"><b style="color:var(--ink)">2 of 5 steps done</b><span>40%</span></div><div class="meter"><div style="width:40%;background:#d97706"></div></div></td><td class="note">20 Oct 2026</td><td><button class="btn sm">Manage</button></td></tr>
+              <tr class="click" data-go="overview"><td>☐</td><td><div style="display:flex;gap:10px;align-items:center"><div class="thumb empty">🏨</div><div><div class="name">Testing Hotel</div><div class="mono">/testing-hotel</div></div></div></td><td>Bengaluru, IN</td><td><span class="badge b-warn">◐ Draft</span></td><td><div class="note" style="display:flex;justify-content:space-between"><b style="color:var(--ink)">1 of 5 steps done</b><span>20%</span></div><div class="meter"><div style="width:20%;background:#d97706"></div></div></td><td class="note">13 Oct 2026</td><td><button class="btn sm">Manage</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="hotels-cards" class="hcards" style="display:none">
+          <div class="hcard"><div class="img"><span class="badge b-ok">● Published</span></div><div class="body"><b>Bell Hotel</b><div class="mono">/bell-hotel-111</div><div class="note" style="margin:8px 0">📍 Sivakasi, IN</div><div class="meter"><div style="width:100%"></div></div></div><div class="foot">Updated 20 Oct 2026<button class="btn sm" data-go="overview">Manage</button></div></div>
+          <div class="hcard"><div class="img b"><span class="badge b-warn">◐ Draft</span></div><div class="body"><b>Hotel B Mumbai</b><div class="mono">/hotel-b-mumbai</div><div class="note" style="margin:8px 0">📍 Mumbai, IN</div><div class="meter"><div style="width:40%;background:#d97706"></div></div></div><div class="foot">Updated 20 Oct 2026<button class="btn sm" data-go="overview">Manage</button></div></div>
+          <div class="hcard"><div class="img c">🏨<span class="badge b-warn">◐ Draft</span></div><div class="body"><b>Testing Hotel</b><div class="mono">/testing-hotel</div><div class="note" style="margin:8px 0">📍 Bengaluru, IN</div><div class="meter"><div style="width:20%;background:#d97706"></div></div></div><div class="foot">Updated 13 Oct 2026<button class="btn sm" data-go="overview">Manage</button></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== HOTEL WORKSPACE (shared header via template below) ===== -->
+    <section class="page" id="overview">
+      <div class="heading"><div><div class="eyebrow">Hotel</div><h1>Bell Hotel</h1><p>Sivakasi · Asia/Kolkata · /admin/hotels/:hotelId/overview</p></div><button class="btn" data-go="hotels">← Back to hotels</button></div>
+      <div class="card">
+        <div class="ws-head">
+          <span class="badge b-ok">● Published</span><span class="mono">/bell-hotel-111</span>
+          <div class="spacer"></div>
+          <span class="info-pop"><button class="btn sm ghost" style="color:var(--warn)">ⓘ 1</button><span class="pop"><b>Still needed for full health</b><ul style="margin:6px 0 0;padding-left:18px"><li>Deluxe King has no open dates after 30 Nov</li></ul></span></span>
+          <button class="btn sm danger">Archive</button><button class="btn sm">Suspend</button>
+        </div>
+        <nav class="tabs" aria-label="Hotel sections">
+          <button class="tab on" data-go="overview">Overview</button><button class="tab">Details</button><button class="tab">Photos</button><button class="tab" data-go="rooms">Rooms &amp; rates</button><button class="tab" data-go="inventory">Prices &amp; availability</button><button class="tab">Policies</button><button class="tab">Tax &amp; billing</button><button class="tab" data-go="bookings">Bookings</button>
+        </nav>
+        <div class="ws-body">
+          <div class="grid g2">
+            <div class="card card-pad">
+              <div class="section-title">Guest preview</div>
+              <div style="display:flex;gap:14px;margin-top:10px">
+                <div style="width:160px;height:110px;border-radius:12px;background:linear-gradient(135deg,#2c7a68,#9fd0b9)"></div>
+                <div><h3 style="font-size:17px">Bell Hotel</h3><div class="note">📍 Sivakasi, Tamil Nadu · ★★★</div><div class="note" style="margin-top:6px">Free Wi-Fi · Parking · Restaurant · Power backup</div><div style="margin-top:8px"><b>from ₹2,499</b> <span class="note">/ night + GST</span></div></div>
+              </div>
+            </div>
+            <div class="card card-pad">
+              <div class="section-title">Content completeness</div>
+              <div style="display:flex;align-items:baseline;gap:8px;margin:8px 0"><span style="font-family:Manrope;font-size:30px;font-weight:800">72%</span><span class="note">doesn't block publishing</span></div>
+              <div class="meter"><div style="width:72%"></div></div>
+              <div class="list-row" style="padding:10px 0 0;border:0"><span class="badge b-warn">Photos 3 / 10</span><span class="badge b-warn">Amenities 4 answered</span><span class="badge b-ok">Policies ✓</span></div>
+              <div style="margin-top:10px"><button class="btn sm">Add photos</button> <button class="btn sm">Complete amenities</button></div>
+            </div>
+          </div>
+          <div class="grid g3" style="margin-top:14px">
+            <div class="card card-pad stat"><div class="label">Bookable room types</div><div class="value">2 / 3</div><div class="sub">Suite is missing a price</div></div>
+            <div class="card card-pad stat"><div class="label">Open dates (next 90 days)</div><div class="value">41</div><div class="sub">Deluxe King closes 30 Nov</div></div>
+            <div class="card card-pad stat"><div class="label">Last updated</div><div class="value" style="font-size:18px">20 Oct, 11:42</div><div class="sub">by Pradeep (price change)</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ROOMS & RATES ===== -->
+    <section class="page" id="rooms">
+      <div class="heading"><div><div class="eyebrow">Bell Hotel</div><h1>Rooms &amp; rates</h1><p>One place per room type: details, photos, price and availability.</p></div><button class="btn primary">+ Add room type</button></div>
+      <div class="split">
+        <div class="card">
+          <table>
+            <thead><tr><th>Room</th><th>Guests</th><th>Rooms</th><th>₹ / night</th><th>Tonight</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr class="click selected"><td><div style="display:flex;gap:10px;align-items:center"><div class="thumb"></div><div><div class="name">Deluxe King</div><div class="mono">DLX-K</div></div></div></td><td>2 + 1</td><td>10</td><td><b>₹3,500</b></td><td>4 free</td><td><span class="badge b-quiet">✓ Bookable</span></td><td><button class="btn sm">Edit ▾</button></td></tr>
+              <tr class="click"><td><div style="display:flex;gap:10px;align-items:center"><div class="thumb" style="background:linear-gradient(135deg,#d9c7a6,#efe2c8)"></div><div><div class="name">Standard Twin</div><div class="mono">STD-T</div></div></div></td><td>2</td><td>12</td><td><b>₹2,499</b></td><td>7 free</td><td><span class="badge b-quiet">✓ Bookable</span></td><td><button class="btn sm">Edit ▾</button></td></tr>
+              <tr class="click"><td><div style="display:flex;gap:10px;align-items:center"><div class="thumb empty">No photo</div><div><div class="name">Suite</div><div class="mono">STE</div></div></div></td><td>2</td><td>2</td><td class="muted">—</td><td class="muted">—</td><td><span class="badge b-bad">⚠ Missing price</span></td><td><button class="btn sm primary">Set price</button></td></tr>
+              <tr class="click"><td><div style="display:flex;gap:10px;align-items:center"><div class="thumb empty">No photo</div><div><div class="name">Family Room</div><div class="mono">FAM</div></div></div></td><td>4 + 2</td><td>4</td><td><b>₹4,800</b></td><td class="muted">—</td><td><span class="badge b-grey">⏸ Disabled</span></td><td><button class="btn sm">Enable</button></td></tr>
+            </tbody>
+          </table>
+          <div class="legend">Status always uses icon + text (never colour alone). "Bookable" stays quiet so problems stand out.</div>
+        </div>
+        <aside class="card panel" aria-label="Room side panel">
+          <div class="panel-head"><div><b>Deluxe King</b> <span class="mono">DLX-K</span></div><button class="btn sm ghost">✕</button></div>
+          <div class="panel-tabs"><button class="on">Details</button><button>Photos (4)</button><button>Price</button><button>Availability</button></div>
+          <div class="card-pad">
+            <div class="field"><label>Room category name *</label><input class="input" value="Deluxe King" /><span class="hint">Pick a name used in your other hotels, or type a new one</span></div>
+            <div class="row2">
+              <div class="field"><label>Room code *</label><input class="input mono" value="DLX-K" /></div>
+              <div class="field"><label>Sellable rooms *</label><input class="input" value="10" /></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>Max adults *</label><input class="input" value="2" /></div>
+              <div class="field"><label>Max children *</label><input class="input" value="1" /></div>
+            </div>
+            <div class="field"><label>Base price per night</label><div class="money"><span>₹</span><input value="3,500" /></div><span class="hint">Before tax. Per-date overrides live in Prices &amp; availability.</span></div>
+            <div style="display:flex;gap:8px;justify-content:space-between;margin-top:6px">
+              <div><button class="btn sm">Duplicate</button> <button class="btn sm danger">Disable</button></div>
+              <button class="btn sm primary" disabled style="opacity:.55" title="Nothing to save yet">Save changes</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===== PRICES & AVAILABILITY GRID ===== -->
+    <section class="page" id="inventory">
+      <div class="heading"><div><div class="eyebrow">Bell Hotel</div><h1>Prices &amp; availability</h1><p>Select dates across room types, then change price, open/close dates or minimum stay.</p></div>
+        <div style="display:flex;gap:8px"><div class="seg"><button>7 days</button><button class="on">14 days</button><button>30 days</button></div><button class="btn">◀</button><button class="btn">Today</button><button class="btn">▶</button></div></div>
+      <div class="card">
+        <div class="gridwrap">
+          <table class="inv">
+            <thead><tr><th>Room type</th>
+              <th>Tue<br/>20</th><th>Wed<br/>21</th><th>Thu<br/>22</th><th>Fri<br/>23</th><th class="wknd">Sat<br/>24</th><th class="wknd">Sun<br/>25</th><th>Mon<br/>26</th><th>Tue<br/>27</th><th>Wed<br/>28</th><th>Thu<br/>29</th><th>Fri<br/>30</th><th class="wknd">Sat<br/>31</th><th class="wknd">Sun<br/>1</th><th>Mon<br/>2</th></tr></thead>
+            <tbody>
+              <tr><td><b>Deluxe King</b><div class="mono">10 rooms</div></td>
+                <td><div class="cell"><b>₹3,500</b><small>4 free</small></div></td><td><div class="cell"><b>₹3,500</b><small>6 free</small></div></td><td><div class="cell sel"><b>₹3,500</b><small>8 free</small></div></td><td><div class="cell sel"><b>₹3,900</b><small>5 free</small></div></td><td><div class="cell sel"><b>₹4,200</b><small>3 free</small></div></td><td><div class="cell sel low"><b>₹4,200</b><small>2 left</small></div></td><td><div class="cell"><b>₹3,500</b><small>7 free</small></div></td><td><div class="cell"><b>₹3,500</b><small>9 free</small></div></td><td><div class="cell"><b>₹3,500</b><small>9 free</small></div></td><td><div class="cell"><b>₹3,500</b><small>8 free</small></div></td><td><div class="cell"><b>₹3,900</b><small>6 free</small></div></td><td><div class="cell"><b>₹4,200</b><small>4 free</small></div></td><td><div class="cell"><b>₹4,200</b><small>5 free</small></div></td><td><div class="cell"><b>₹3,500</b><small>9 free</small></div></td></tr>
+              <tr><td><b>Standard Twin</b><div class="mono">12 rooms</div></td>
+                <td><div class="cell"><b>₹2,499</b><small>7 free</small></div></td><td><div class="cell"><b>₹2,499</b><small>9 free</small></div></td><td><div class="cell sel"><b>₹2,499</b><small>10 free</small></div></td><td><div class="cell sel"><b>₹2,799</b><small>6 free</small></div></td><td><div class="cell sel closed"><b>Closed</b><small>stop-sell</small></div></td><td><div class="cell sel closed"><b>Closed</b><small>stop-sell</small></div></td><td><div class="cell"><b>₹2,499</b><small>11 free</small></div></td><td><div class="cell"><b>₹2,499</b><small>12 free</small></div></td><td><div class="cell"><b>₹2,499</b><small>12 free</small></div></td><td><div class="cell"><b>₹2,499</b><small>10 free</small></div></td><td><div class="cell"><b>₹2,799</b><small>8 free</small></div></td><td><div class="cell"><b>₹2,999</b><small>6 free</small></div></td><td><div class="cell"><b>₹2,999</b><small>7 free</small></div></td><td><div class="cell"><b>₹2,499</b><small>12 free</small></div></td></tr>
+              <tr><td><b>Suite</b><div class="mono">2 rooms · <span style="color:var(--bad)">no price</span></div></td>
+                <td><div class="cell"><b style="color:var(--bad)">—</b><small>2 free</small></div></td><td><div class="cell"><b style="color:var(--bad)">—</b><small>2 free</small></div></td><td><div class="cell"><b style="color:var(--bad)">—</b><small>2 free</small></div></td><td><div class="cell"><b style="color:var(--bad)">—</b><small>1 left</small></div></td><td><div class="cell"><b style="color:var(--bad)">—</b><small>2 free</small></div></td><td><div class="cell"><b style="color:var(--bad)">—</b><small>2 free</small></div></td><td colspan="8" class="muted" style="font-size:12px">Not open after 26 Oct · <a href="#">Open dates</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="legend"><span>▢ Selected: 2 room types × 4 nights (22–25 Oct)</span><span>▧ Closed (stop-sell)</span><span style="color:var(--warn)">Amber = 2 or fewer rooms left</span><span>Keyboard: arrows move, Shift+arrows extend selection, Enter edits</span></div>
+        <div class="bulk" aria-label="Bulk edit selected dates">
+          <div class="field" style="margin:0"><label>Price per night</label><div class="money" style="width:150px"><span>₹</span><input placeholder="Keep" /></div></div>
+          <div class="field" style="margin:0"><label>Availability</label><select class="input"><option>Keep as is</option><option>Open for sale</option><option>Close (stop-sell)</option></select></div>
+          <div class="field" style="margin:0"><label>Min stay (nights)</label><input class="input" style="min-width:110px" placeholder="Keep" /></div>
+          <div class="field" style="margin:0"><label>Book at least (days before)</label><input class="input" style="min-width:110px" placeholder="Keep" /></div>
+          <div class="spacer"></div>
+          <button class="btn">Clear selection</button><button class="btn primary">Apply to 8 nights</button>
+        </div>
+      </div>
+      <p class="note" style="margin-top:10px">Changes are saved as one transaction and recorded in the audit log ("who changed this price"). Zero or unusually low prices ask for confirmation.</p>
+    </section>
+
+    <!-- ===== BOOKINGS LIST ===== -->
+    <section class="page" id="bookings">
+      <div class="heading"><div><div class="eyebrow">Bell Hotel</div><h1>Bookings</h1><p>Find any booking by guest name, phone or booking ID.</p></div><button class="btn primary" data-go="newbooking">+ New booking</button></div>
+      <div class="card">
+        <div class="toolbar">
+          <input class="input" style="flex:1;min-width:240px" placeholder="Search name, phone, booking ID (e.g. SW-7K3M9Q)…" />
+          <select class="input"><option>Stay dates: Next 30 days</option></select>
+          <select class="input"><option>Status: All</option></select>
+          <select class="input"><option>Payment: All</option></select>
+          <div class="seg"><button class="on">☰ List</button><button>📅 Calendar</button></div>
+        </div>
+        <table>
+          <thead><tr><th>Booking</th><th>Guest</th><th>Stay</th><th>Room</th><th>Total</th><th>Booking</th><th>Payment</th></tr></thead>
+          <tbody>
+            <tr class="click" data-go="bookingdetail"><td class="mono">SW-7K3M9Q</td><td><b>R. Kumar</b><div class="note">+91 98400 12345</div></td><td>21–23 Oct<div class="note">2 nights</div></td><td>Deluxe King × 1</td><td><b>₹7,350</b></td><td><span class="badge b-ok">✓ Confirmed</span></td><td><span class="badge b-info">Pay at hotel</span></td></tr>
+            <tr class="click" data-go="bookingdetail"><td class="mono">SW-4PZ8RD</td><td><b>A. Shah</b><div class="note">+91 99000 55555</div></td><td>20–21 Oct<div class="note">1 night</div></td><td>Suite × 1</td><td><b>₹11,210</b><div class="note">₹9,500 + 18% GST</div></td><td><span class="badge b-warn">◷ Optional · until 21 Oct</span></td><td><span class="badge b-grey">Pending</span></td></tr>
+            <tr class="click" data-go="bookingdetail"><td class="mono">SW-9QK2TF</td><td><b>M. Iyer</b><div class="note">+91 90030 77777</div></td><td>18–19 Oct<div class="note">1 night</div></td><td>Standard Twin × 2</td><td><b>₹5,248</b></td><td><span class="badge b-grey">✕ Cancelled</span></td><td><span class="badge b-grey">Not required</span></td></tr>
+            <tr class="click" data-go="bookingdetail"><td class="mono">SW-2MX7HB</td><td><b>J. Thomas</b><div class="note">+91 94440 33333</div></td><td>17–18 Oct<div class="note">1 night</div></td><td>Deluxe King × 1</td><td><b>₹3,675</b></td><td><span class="badge b-bad">⊘ No-show</span></td><td><span class="badge b-info">Pay at hotel</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== BOOKING DETAIL ===== -->
+    <section class="page" id="bookingdetail">
+      <div class="heading"><div><div class="eyebrow">Booking · Bell Hotel</div><h1>SW-7K3M9Q · R. Kumar</h1><p>21–23 Oct 2026 · Deluxe King × 1 · 2 adults, 1 child</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-go="bookings">← Bookings</button><button class="btn">Modify dates</button><button class="btn">Mark no-show</button><button class="btn danger">Cancel booking</button><button class="btn primary">Check in</button></div></div>
+      <div class="grid g2">
+        <div class="grid" style="gap:14px">
+          <div class="card card-pad">
+            <div style="display:flex;gap:8px;margin-bottom:12px"><span class="badge b-ok">✓ Confirmed</span><span class="badge b-info">Pay at hotel · Pending</span></div>
+            <dl class="kv">
+              <dt>Guest</dt><dd>Rajesh Kumar · +91 98400 12345 · rajesh@example.com</dd>
+              <dt>Company GSTIN</dt><dd>33AABCU9603R1ZM <span class="note">(for business invoice)</span></dd>
+              <dt>Created</dt><dd>15 Oct 2026, 10:12 by Front desk (staff booking)</dd>
+              <dt>Special requests</dt><dd>Early check-in if possible</dd>
+            </dl>
+          </div>
+          <div class="card card-pad">
+            <div class="section-title">Price breakdown <span class="note">(calculated by the server, saved with the booking)</span></div>
+            <table class="lines">
+              <tr><td>21 Oct · Deluxe King</td><td style="text-align:right">₹3,500.00</td></tr>
+              <tr><td class="note">GST 5% (≤ ₹7,500/night) · CGST 2.5% + SGST 2.5%</td><td style="text-align:right" class="note">₹175.00</td></tr>
+              <tr><td>22 Oct · Deluxe King</td><td style="text-align:right">₹3,500.00</td></tr>
+              <tr><td class="note">GST 5% · CGST 2.5% + SGST 2.5%</td><td style="text-align:right" class="note">₹175.00</td></tr>
+              <tr class="total"><td>Total</td><td style="text-align:right">₹7,350.00</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="grid" style="gap:14px">
+          <div class="card card-pad">
+            <div class="section-title">Cancellation terms (snapshot)</div>
+            <p class="note" style="margin:6px 0 0">Free cancellation until 40 hours before check-in (19 Oct, 22:00). After that: 50% of the stay. No-show: full stay amount.</p>
+            <div style="margin-top:10px;padding:10px;border-radius:10px;background:var(--warn-bg);font-size:12.5px;color:#92400e"><b>If cancelled now:</b> fee ₹3,675 · nothing to refund (pay at hotel). The button will say "Cancel and charge ₹3,675".</div>
+          </div>
+          <div class="card card-pad">
+            <div class="section-title">History</div>
+            <ul class="timeline">
+              <li><div><b>Booking confirmed</b><div class="note">15 Oct, 10:12 · Front desk</div></div></li>
+              <li><div><b>Hold created → converted</b><div class="note">15 Oct, 10:09 · 3 min</div></div></li>
+              <li><div><b>Guest GSTIN added</b><div class="note">15 Oct, 10:11 · Front desk</div></div></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== NEW BOOKING ===== -->
+    <section class="page" id="newbooking">
+      <div class="heading"><div><div class="eyebrow">Bell Hotel · /admin/hotels/:hotelId/bookings/new</div><h1>New booking</h1><p>Dates, room, then guest details. Totals are calculated by the server.</p></div><span class="hold" role="status" aria-live="off">⏱ Room held · 9:32 <button class="btn sm" style="margin-left:4px">Need more time</button></span></div>
+      <div class="steps"><span class="step done"><i>✓</i>Stay</span><span class="step on"><i>2</i>Room</span><span class="step"><i>3</i>Guest &amp; payment</span></div>
+      <div class="grid g2">
+        <div class="card card-pad">
+          <div class="note" style="margin-bottom:10px">21–23 Oct 2026 · 2 nights · 2 adults, 1 child · <a href="#">Change</a></div>
+          <div class="room-opt on"><div class="thumb"></div><div style="flex:1"><b>Deluxe King</b><div class="note">Up to 2 + 1 · 4 free · ₹3,500 / night</div></div><div style="text-align:right"><b>₹7,350</b><div class="note">incl. GST</div></div><button class="btn sm primary">Selected</button></div>
+          <div class="room-opt"><div class="thumb" style="background:linear-gradient(135deg,#d9c7a6,#efe2c8)"></div><div style="flex:1"><b>Standard Twin</b><div class="note">Up to 2 · 7 free · ₹2,499 / night</div></div><div style="text-align:right"><b>₹5,248</b><div class="note">incl. GST</div></div><button class="btn sm">Choose</button></div>
+          <div class="room-opt" style="opacity:.55"><div class="thumb empty">—</div><div style="flex:1"><b>Suite</b><div class="note">Not available: no price set</div></div><span class="badge b-bad">⚠ Missing price</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:14px"><button class="btn">← Back</button><button class="btn primary">Continue to guest details →</button></div>
+        </div>
+        <div class="card card-pad">
+          <div class="section-title">Summary</div>
+          <table class="lines">
+            <tr><td>Deluxe King × 1 · 2 nights</td><td style="text-align:right">₹7,000.00</td></tr>
+            <tr><td class="note">GST 5% per night (CGST + SGST)</td><td style="text-align:right" class="note">₹350.00</td></tr>
+            <tr class="total"><td>Total</td><td style="text-align:right">₹7,350.00</td></tr>
+          </table>
+          <div class="field" style="margin-top:12px"><label>Payment</label><select class="input"><option>Pay at hotel</option><option disabled>Payment link (P7)</option></select></div>
+          <p class="note">The room is held for 10 minutes while you finish. You'll get a warning before it runs out; if it expires, your details stay filled in.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== AUDIT LOG ===== -->
+    <section class="page" id="audit">
+      <div class="heading"><div><div class="eyebrow">Admin</div><h1>Audit log</h1><p>Who changed what, and when.</p></div></div>
+      <div class="card">
+        <div class="toolbar"><input class="input" placeholder="Search…" style="flex:1" /><select class="input"><option>All hotels you can access</option></select><select class="input"><option>Action: All</option></select><select class="input"><option>Last 7 days</option></select></div>
+        <table>
+          <thead><tr><th>When</th><th>Who</th><th>Hotel</th><th>Action</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td class="note">20 Oct, 11:42</td><td>Pradeep</td><td>Bell Hotel</td><td class="mono">rate.daily.update</td><td>Deluxe King · 23–25 Oct · ₹3,500 → ₹4,200</td></tr>
+            <tr><td class="note">20 Oct, 11:40</td><td>Pradeep</td><td>Bell Hotel</td><td class="mono">inventory.close</td><td>Standard Twin · 24–25 Oct closed</td></tr>
+            <tr><td class="note">19 Oct, 17:05</td><td>Asha (Manager)</td><td>Bell Hotel</td><td class="mono">room_type.disable</td><td>Family Room · reason: "Renovation"</td></tr>
+            <tr><td class="note">19 Oct, 09:20</td><td>Pradeep</td><td>Hotel B Mumbai</td><td class="mono">hotel.delete</td><td>Soft delete · restorable by super admin</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  // Simple screen switching for the mockup.
+  const pages = document.querySelectorAll('.page');
+  const navItems = document.querySelectorAll('.nav-item');
+  function go(id) {
+    pages.forEach(p => p.classList.toggle('active', p.id === id));
+    navItems.forEach(n => n.classList.toggle('active', n.dataset.go === id));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-go]');
+    if (t) { e.preventDefault(); go(t.dataset.go); }
+    const v = e.target.closest('[data-view]');
+    if (v) {
+      v.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === v));
+      document.getElementById('hotels-list').style.display = v.dataset.view === 'list' ? '' : 'none';
+      document.getElementById('hotels-cards').style.display = v.dataset.view === 'cards' ? '' : 'none';
+    }
+  });
+</script>
+</body>
+</html>
